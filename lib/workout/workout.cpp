@@ -91,12 +91,15 @@ namespace hawaii::workout
         {
             unsigned long const now_ms = millis();
             // if (HIT_DEBOUNCE_TIME_MS <= now_ms - state.last_hit_time_ms)
+#ifdef SHOW_HIT
             {
                 // state.last_hit_time_ms = now_ms;
+                lamp::set_color(workout.lamp, 0xFFFF00FF);
                 Serial.print(" Удар ");
                 Serial.print(acceleration * 80.0f);
                 Serial.println();
             }
+#endif
 
             state.punchbag_acceleration = acceleration;
             state.delta = AccelerationDelta::Increasing;

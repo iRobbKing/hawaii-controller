@@ -6,12 +6,10 @@ namespace
 
     [[nodiscard]] auto init_ethernet(hwc::System &connection, hwc::Config &config) -> bool
     {
-        // bool const result = Ethernet.begin(config.controller_mac); //, IPAddress{192, 168, 50, 10});
+        return Ethernet.begin(config.controller_mac);
+        // Ethernet.begin(config.controller_mac, config.controller_ip);
         // Serial.println(Ethernet.localIP());
-        // return result;
-        Ethernet.begin(config.controller_mac, config.controller_ip);
-        Serial.println(Ethernet.localIP());
-        return true;
+        // return true;
     }
 
     byte mac_address[6] = { 0, 0, 0, 0, 0, 0 };
@@ -22,11 +20,6 @@ namespace
     {
         if (length != sizeof(mac_address) + sizeof(received_setcolor_color))
             return;
-
-        Serial.print("Received setcolor: ");
-        Serial.print(payload[4]);
-        Serial.print(" ");
-        Serial.println(payload[5]);
 
         if (payload[4] != 254 && mac_address[4] != payload[4] || payload[5] != 170 && mac_address[5] != payload[5])
             return;
@@ -45,12 +38,8 @@ namespace
         connection.mqtt.setCallback(callback);
 
         bool result = connection.mqtt.connect(config.mqtt_client_id);
-        // return connection.mqtt.connect(config.mqtt_client_id, config.mqtt_username, config.mqtt_password);
 
         connection.mqtt.subscribe("l");
-
-        Serial.print("MQTT state: ");
-        Serial.println(connection.mqtt.state());
 
         return result;
     }
@@ -62,11 +51,8 @@ namespace hawaii::workout::connection
     {
         memcpy(mac_address, config.controller_mac, sizeof(mac_address));
 
-        Serial.println("11111111=");
-        if (!init_ethernet(connection, config)) return Error::FailedToGetIp;
-        Serial.println("22222");
+        if (!init_ethernet(connection, config)) return Error::FailedToGetIp;;
         if (!init_mqtt(connection, config)) return Error::FailedToInitMqtt;
-        Serial.println("33333");
 
         return Error::None;
     }

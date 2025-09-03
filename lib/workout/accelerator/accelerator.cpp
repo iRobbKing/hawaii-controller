@@ -6,11 +6,6 @@ namespace
 
     [[nodiscard]] auto init_mpu(hwa::System &accelerator) -> bool
     {
-        // if (!accelerator.mpu.testConnection()) {
-        //     Serial.println("MPU6050 test failed");
-        //     return false;
-        // }
-
         accelerator.mpu.initialize();
 
         return true;
@@ -105,9 +100,6 @@ namespace
         gy_offset = -mean[4] / 4;
         gz_offset = -mean[5] / 4;
 
-        Serial.println("запущена калибровка датчика");
-        Serial.println("количество итераций калибровки: " + String(vNumColibrations));
-        Serial.print("калибруeм датчик ");
         // Калибровка очень точный процесс и может идти долго.
         // Поэтому делаем заданное число измерений.
         // Но, если кабировка пройдет быстрее, то процесс прервется.
@@ -120,7 +112,6 @@ namespace
             mpu.setXGyroOffset(gx_offset);
             mpu.setYGyroOffset(gy_offset);
             mpu.setZGyroOffset(gz_offset);
-            Serial.print(".");
 
             // Вычисление средних показателей.
             mean_sensors(mpu, mean);
@@ -158,8 +149,6 @@ namespace
             if (ready == 6)
                 break;
         }
-        Serial.println("");
-        Serial.println("калибровка завершена");
     }
 
     auto calibrate_mpu(hwa::System &accelerator, hwa::Config &config) -> void
