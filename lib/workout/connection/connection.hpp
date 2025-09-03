@@ -23,6 +23,7 @@ namespace hawaii::workout::connection
     struct Config
     {
         MacAddress controller_mac;
+        IPAddress controller_ip;
         IPAddress mqtt_server_address;
         Port mqtt_server_port;
         char const *mqtt_client_id;
@@ -37,7 +38,9 @@ namespace hawaii::workout::connection
     };
 
     [[nodiscard]] auto init(System &connection, Config &config) -> Error;
-    [[nodiscard]] auto send_message(System &connection, Topic topic, Payload payload) -> Error;
+    [[nodiscard]] auto try_get_setcolor(uint32_t& out_color) -> bool;
+    [[nodiscard]] auto send_ping(System &connection, Config const& config) -> Error;
+    [[nodiscard]] auto send_acceleration(System &connection, Config const& config, float acceleration) -> Error;
 }
 
 #endif

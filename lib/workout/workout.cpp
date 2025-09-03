@@ -4,6 +4,8 @@ namespace hawaii::workout
 {
     auto init(System &workout, Config &config) -> Error
     {
+        lamp::init(workout.lamp, config.lamp);
+
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
@@ -26,11 +28,45 @@ namespace hawaii::workout
         return error;
     }
 
+    auto show_error(System &workout) -> void
+    {
+        if (round(millis() / 1000) % 3 == 0)
+            lamp::set_color(workout.lamp, 0xFFFF0000);
+        else
+            lamp::set_color(workout.lamp, 0);
+    }
+
     auto run(System &workout, Config &config, State &state) -> Error
     {
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
+
+        uint64_t const now = millis();
+        uint32_t setcolor_color;
+        if (connection::try_get_setcolor(setcolor_color))
+        {
+            lamp::set_color(workout.lamp, setcolor_color);
+            workout.need_to_clear_color = true;
+            workout.set_color_at = now;
+        }
+        // TODO: fix overflow
+        if (workout.need_to_clear_color && 444 <= now - workout.set_color_at)
+        {
+            workout.need_to_clear_color = false;
+            lamp::set_color(workout.lamp, 0);
+        }
+
+        if (round(millis() / 1000) % 5 == 0)
+        {
+            connection::Error const send_message_error = connection::send_ping(workout.connection, config.connection);
+            if (send_message_error != connection::Error::None)
+            {
+                error.cause = ErrorCause::Connection;
+                error.payload.connection = send_message_error;
+                return error;
+            }
+        }
 
         // TODO: ticks from ddd? since we have to call this from int callback from loop
         // and only call get_acceleration if there is data
@@ -65,10 +101,7 @@ namespace hawaii::workout
             state.punchbag_acceleration = acceleration;
             state.delta = AccelerationDelta::Increasing;
 
-            connection::Topic constexpr topic = "accelerator/acceleration";
-            unsigned short const now = (unsigned short) millis();
-            connection::Topic const payload = reinterpret_cast<connection::Topic>(&now);
-            connection::Error const send_message_error = connection::send_message(workout.connection, topic, payload);
+            connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
             if (send_message_error != connection::Error::None) {
                 error.cause = ErrorCause::Connection;
                 error.payload.connection = send_message_error;

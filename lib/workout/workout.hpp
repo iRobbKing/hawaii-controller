@@ -3,6 +3,7 @@
 
 #include "accelerator/accelerator.hpp"
 #include "connection/connection.hpp"
+#include "lamp/lamp.hpp"
 
 namespace hawaii::workout
 {
@@ -47,15 +48,20 @@ namespace hawaii::workout
     {
         accelerator::Config accelerator;
         connection::Config connection;
+        lamp::Config lamp;
     };
 
     struct System
     {
         accelerator::System accelerator;
         connection::System connection;
+        lamp::System lamp;
+        bool need_to_clear_color = false;
+        uint64_t set_color_at;
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;
+    auto show_error(System &workout) -> void;
     [[nodiscard]] auto run(System &workout, Config &config, State &state) -> Error;
 }
 

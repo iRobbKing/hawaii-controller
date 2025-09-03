@@ -31,32 +31,17 @@ namespace
 
 auto setup() -> void
 {
-    Serial.begin(9600);
-
     config = hw::Config{
         { ACCEL_FS::A8G },
-        { { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xAD }, IPAddress{192, 168, 50, 1}, 1883, "arduinoClient332", "testuser", "123" },
+        { { MAC }, IPAddress{192, 168, 2, 128}, IPAddress{SERVER}, 1883, "arduinoClient1", "testuser", "123" },
+        { 24,  6, 255 }
     };
 
     Wire.begin();
     Serial.begin(9600);
-    Serial.println("Scanning...");
     while (!Serial);
 
-    for (byte address = 1; address < 127; address++)
-    {
-        Wire.beginTransmission(address);
-        if (Wire.endTransmission() == 0)
-        {
-            Serial.print("I2C device found at 0x");
-            Serial.println(address, HEX);
-        }
-    }
-    Serial.println("Scan complete.");
-
-    Serial.println("---------");
     hw::Error error = hw::init(workout, config);
-    Serial.println("=========");
     if (error.cause != hw::ErrorCause::None) {
         log_error(error);
         has_errored = true;
@@ -66,7 +51,10 @@ auto setup() -> void
 
 auto loop() -> void
 {
-    if (has_errored) return;
+    if (has_errored) {
+        hw::show_error(workout);
+        return;
+    }
 
     hw::Error error = hw::run(workout, config, state);
     if (error.cause != hw::ErrorCause::None) {

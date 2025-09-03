@@ -6,8 +6,10 @@ namespace
 
     [[nodiscard]] auto init_mpu(hwa::System &accelerator) -> bool
     {
-        if (!accelerator.mpu.testConnection())
-            return false;
+        // if (!accelerator.mpu.testConnection()) {
+        //     Serial.println("MPU6050 test failed");
+        //     return false;
+        // }
 
         accelerator.mpu.initialize();
 
