@@ -58,6 +58,8 @@ namespace hawaii::workout
         lamp::System lamp;
         bool need_to_clear_color = false;
         uint64_t set_color_at;
+        uint64_t clear_color_in;
+        bool show_hit = false;
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;

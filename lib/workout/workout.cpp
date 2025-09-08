@@ -49,9 +49,13 @@ namespace hawaii::workout
             lamp::set_color(workout.lamp, setcolor_color);
             workout.need_to_clear_color = true;
             workout.set_color_at = now;
+            workout.clear_color_in = 444;
         }
+        
+        connection::try_get_dev_mode(workout.show_hit);
+
         // TODO: fix overflow
-        if (workout.need_to_clear_color && 444 <= now - workout.set_color_at)
+        if (workout.need_to_clear_color && workout.clear_color_in <= now - workout.set_color_at)
         {
             workout.need_to_clear_color = false;
             lamp::set_color(workout.lamp, 0);
@@ -91,15 +95,17 @@ namespace hawaii::workout
         {
             unsigned long const now_ms = millis();
             // if (HIT_DEBOUNCE_TIME_MS <= now_ms - state.last_hit_time_ms)
-#ifdef SHOW_HIT
+            if (workout.show_hit)
             {
                 // state.last_hit_time_ms = now_ms;
                 lamp::set_color(workout.lamp, 0xFFFF00FF);
                 Serial.print(" Удар ");
                 Serial.print(acceleration * 80.0f);
                 Serial.println();
+                workout.need_to_clear_color = true;
+                workout.set_color_at = now_ms;
+                workout.clear_color_in = 200;
             }
-#endif
 
             state.punchbag_acceleration = acceleration;
             state.delta = AccelerationDelta::Increasing;

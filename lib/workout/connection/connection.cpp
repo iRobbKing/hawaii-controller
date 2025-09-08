@@ -15,9 +15,18 @@ namespace
     byte mac_address[6] = { 0, 0, 0, 0, 0, 0 };
     bool has_received_setcolor = false;
     uint32_t received_setcolor_color = 0;
+    bool has_received_dev_mode = false;
+    bool received_dev_mode = false;
 
     auto callback(char* topic, byte* payload, unsigned int length) -> void
     {
+        if (!strcmp(topic, "d"))
+        {
+            has_received_dev_mode = true;
+            received_dev_mode = *((bool*)payload);
+            return;    
+        }
+
         if (length != sizeof(mac_address) + sizeof(received_setcolor_color))
             return;
 
@@ -28,7 +37,7 @@ namespace
         {
             has_received_setcolor = true;
             received_setcolor_color = *((uint32_t*)(payload + sizeof(mac_address)));
-        }
+        } 
     }
 
     auto init_mqtt(hwc::System &connection, hwc::Config &config) -> bool
@@ -40,6 +49,7 @@ namespace
         bool result = connection.mqtt.connect(config.mqtt_client_id);
 
         connection.mqtt.subscribe("l");
+        connection.mqtt.subscribe("d");
 
         return result;
     }
@@ -67,6 +77,15 @@ namespace hawaii::workout::connection
         }
 
         return false;
+    }
+
+    auto try_get_dev_mode(bool& out_is_enabled) -> void
+    {
+        if (has_received_dev_mode)
+        {
+            has_received_dev_mode = false;
+            out_is_enabled = received_dev_mode;
+        }
     }
 
     auto send_ping(System &connection, Config const& config) -> Error
