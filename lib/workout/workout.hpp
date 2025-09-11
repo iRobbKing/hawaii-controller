@@ -14,8 +14,8 @@ namespace hawaii::workout
         Decreasing = 2,
     };
 
-    unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 50;
-    float constexpr NOISE_LIMIT = 0.5f;
+    unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 250;
+    float constexpr NOISE_LIMIT = 0.37f;
 
     struct State
     {
@@ -60,10 +60,11 @@ namespace hawaii::workout
         uint64_t set_color_at;
         uint64_t clear_color_in;
         bool show_hit = false;
+        bool need_to_show_me = false;
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;
-    auto show_error(System &workout) -> void;
+    [[nodiscard]] auto handle_error(System &workout, Config const& config, Error error) -> bool;
     [[nodiscard]] auto run(System &workout, Config &config, State &state) -> Error;
 }
 

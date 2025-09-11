@@ -6,11 +6,15 @@ namespace hawaii::workout
     {
         lamp::init(workout.lamp, config.lamp);
 
+        lamp::set_color(workout.lamp, 0xFFFFFF00);
+
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
 
+        Serial.println(1);
         accelerator::Error const accelerator_error = accelerator::init(workout.accelerator, config.accelerator);
+        Serial.println(2);
         if (accelerator_error != accelerator::Error::None)
         {
             error.cause = ErrorCause::Accelerator;
@@ -18,22 +22,33 @@ namespace hawaii::workout
             return error;
         }
 
+        Serial.println(3);
         connection::Error const connection_error = connection::init(workout.connection, config.connection);
+        Serial.println(4);
         if (connection_error != connection::Error::None) {
             error.cause = ErrorCause::Connection;
             error.payload.connection = connection_error;
             return error;
         }
 
+        lamp::set_color(workout.lamp, 0);
+
         return error;
     }
 
-    auto show_error(System &workout) -> void
+    auto handle_error(System &workout, Config const& config, Error error) -> bool
     {
         if (round(millis() / 1000) % 3 == 0)
             lamp::set_color(workout.lamp, 0xFFFF0000);
         else
             lamp::set_color(workout.lamp, 0);
+
+        if (round(millis() / 1000) % 5 == 0 && error.cause == ErrorCause::Connection)
+        {
+            return connection::reconnect(workout.connection, config.connection);
+        }
+
+        return false;
     }
 
     auto run(System &workout, Config &config, State &state) -> Error
@@ -59,6 +74,17 @@ namespace hawaii::workout
         {
             workout.need_to_clear_color = false;
             lamp::set_color(workout.lamp, 0);
+        }
+
+        connection::try_get_show_me(workout.need_to_show_me);
+
+        if (workout.need_to_show_me)
+        {
+            workout.need_to_show_me = false;
+            lamp::set_color(workout.lamp, 0xFF00FFFF);
+            workout.need_to_clear_color = true;
+            workout.set_color_at = now;
+            workout.clear_color_in = 3000;
         }
 
         if (round(millis() / 1000) % 5 == 0)
@@ -93,28 +119,31 @@ namespace hawaii::workout
 
         if (state.delta != AccelerationDelta::Increasing)
         {
-            unsigned long const now_ms = millis();
-            // if (HIT_DEBOUNCE_TIME_MS <= now_ms - state.last_hit_time_ms)
-            if (workout.show_hit)
-            {
-                // state.last_hit_time_ms = now_ms;
-                lamp::set_color(workout.lamp, 0xFFFF00FF);
-                Serial.print(" Удар ");
-                Serial.print(acceleration * 80.0f);
-                Serial.println();
-                workout.need_to_clear_color = true;
-                workout.set_color_at = now_ms;
-                workout.clear_color_in = 200;
-            }
-
             state.punchbag_acceleration = acceleration;
             state.delta = AccelerationDelta::Increasing;
 
-            connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
-            if (send_message_error != connection::Error::None) {
-                error.cause = ErrorCause::Connection;
-                error.payload.connection = send_message_error;
-                return error;
+            unsigned long const now_ms = millis();
+            if (HIT_DEBOUNCE_TIME_MS <= now_ms - state.last_hit_time_ms)
+            {
+                state.last_hit_time_ms = now_ms;
+
+                if (workout.show_hit)
+                {
+                    lamp::set_color(workout.lamp, 0xFFFF00FF);
+                    Serial.print(" Удар ");
+                    Serial.print(acceleration);
+                    Serial.println();
+                    workout.need_to_clear_color = true;
+                    workout.set_color_at = now_ms;
+                    workout.clear_color_in = 200;
+                }
+
+                connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
+                if (send_message_error != connection::Error::None) {
+                    error.cause = ErrorCause::Connection;
+                    error.payload.connection = send_message_error;
+                    return error;
+                }
             }
 
             return error;

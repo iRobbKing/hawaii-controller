@@ -17,6 +17,7 @@ namespace
     uint32_t received_setcolor_color = 0;
     bool has_received_dev_mode = false;
     bool received_dev_mode = false;
+    bool received_show_me = false;
 
     auto callback(char* topic, byte* payload, unsigned int length) -> void
     {
@@ -25,6 +26,13 @@ namespace
             has_received_dev_mode = true;
             received_dev_mode = *((bool*)payload);
             return;    
+        }
+
+        if (length == sizeof(mac_address) && !strcmp(topic, "s"))
+        {
+            received_show_me = !(payload[4] != 254 && mac_address[4] != payload[4] || payload[5] != 170 && mac_address[5] != payload[5]);
+
+            return;
         }
 
         if (length != sizeof(mac_address) + sizeof(received_setcolor_color))
@@ -50,6 +58,7 @@ namespace
 
         connection.mqtt.subscribe("l");
         connection.mqtt.subscribe("d");
+        connection.mqtt.subscribe("s");
 
         return result;
     }
@@ -65,6 +74,20 @@ namespace hawaii::workout::connection
         if (!init_mqtt(connection, config)) return Error::FailedToInitMqtt;
 
         return Error::None;
+    }
+
+    auto reconnect(System &connection, Config const& config) -> bool
+    {
+        bool result = connection.mqtt.connect(config.mqtt_client_id);
+
+        if (result)
+        {
+            connection.mqtt.subscribe("l");
+            connection.mqtt.subscribe("d");
+            connection.mqtt.subscribe("s");
+        }
+
+        return connection.mqtt.connected();
     }
 
     auto try_get_setcolor(uint32_t& out_color) -> bool
@@ -86,6 +109,12 @@ namespace hawaii::workout::connection
             has_received_dev_mode = false;
             out_is_enabled = received_dev_mode;
         }
+    }
+
+    auto try_get_show_me(bool& out_is_enabled) -> void
+    {
+        out_is_enabled = received_show_me;
+        received_show_me = false;
     }
 
     auto send_ping(System &connection, Config const& config) -> Error

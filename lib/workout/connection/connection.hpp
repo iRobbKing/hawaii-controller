@@ -38,8 +38,10 @@ namespace hawaii::workout::connection
     };
 
     [[nodiscard]] auto init(System &connection, Config &config) -> Error;
+    [[nodiscard]] auto reconnect(System &connection, Config const& config) -> bool;
     [[nodiscard]] auto try_get_setcolor(uint32_t& out_color) -> bool;
     auto try_get_dev_mode(bool& out_is_enabled) -> void;
+    auto try_get_show_me(bool& out_is_enabled) -> void;
     [[nodiscard]] auto send_ping(System &connection, Config const& config) -> Error;
     [[nodiscard]] auto send_acceleration(System &connection, Config const& config, float acceleration) -> Error;
 }
