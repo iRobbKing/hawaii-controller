@@ -8,6 +8,8 @@ namespace hawaii::workout
 
         lamp::set_color(workout.lamp, 0xFFFFFF00);
 
+        monitor::init(workout.monitor);
+
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
@@ -50,6 +52,8 @@ namespace hawaii::workout
 
         return false;
     }
+
+    int ccc = 0;
 
     auto run(System &workout, Config &config, State &state) -> Error
     {
@@ -130,13 +134,16 @@ namespace hawaii::workout
                 if (workout.show_hit)
                 {
                     lamp::set_color(workout.lamp, 0xFFFF00FF);
-                    Serial.print(" Удар ");
-                    Serial.print(acceleration);
-                    Serial.println();
                     workout.need_to_clear_color = true;
                     workout.set_color_at = now_ms;
                     workout.clear_color_in = 200;
                 }
+
+                Serial.print(" Удар ");
+                Serial.print(++ccc);
+                Serial.print(" ");
+                Serial.print(acceleration);
+                Serial.println();
 
                 connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
                 if (send_message_error != connection::Error::None) {

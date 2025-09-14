@@ -4,6 +4,7 @@
 #include "accelerator/accelerator.hpp"
 #include "connection/connection.hpp"
 #include "lamp/lamp.hpp"
+#include "monitor/monitor.hpp"
 
 namespace hawaii::workout
 {
@@ -15,7 +16,7 @@ namespace hawaii::workout
     };
 
     unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 250;
-    float constexpr NOISE_LIMIT = 0.37f;
+    float constexpr NOISE_LIMIT = 0.25f;
 
     struct State
     {
@@ -56,6 +57,7 @@ namespace hawaii::workout
         accelerator::System accelerator;
         connection::System connection;
         lamp::System lamp;
+        monitor::System monitor;
         bool need_to_clear_color = false;
         uint64_t set_color_at;
         uint64_t clear_color_in;

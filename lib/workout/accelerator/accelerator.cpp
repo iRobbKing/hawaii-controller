@@ -186,11 +186,14 @@ namespace hawaii::workout::accelerator
 {
     auto init(System &accelerator, Config &config) -> Error
     {
+        Serial.println(11);
         if (!init_mpu(accelerator))
             return Error::FailedToInitMpu;
+        Serial.println(12);
         // if (!init_mpu_dmp(accelerator))
         //     return Error::FailedToInitDmp;
         calibrate_mpu(accelerator, config);
+        Serial.println(13);
         // Serial.println("calibrated");
         // set_mpu_interrupt(accelerator, config);
         // Serial.println("interrupt set");

@@ -10,6 +10,7 @@
 namespace hw = hawaii::workout;
 namespace hwa = hw::accelerator;
 namespace hwc = hw::connection;
+namespace hwm = hw::monitor;
 
 hw::Config config{};
 hw::System workout{};
@@ -22,7 +23,7 @@ namespace
     auto log_error(hw::Error error) -> void
     {
         // hwm::print(workout.monitor, String((int)error.cause, 10) + " " + String((int)error.payload.erased, 10));
-        // hwm::print(workout.monitor, "hss");
+        hwm::print(workout.monitor, "hss");
     }
 }
 
