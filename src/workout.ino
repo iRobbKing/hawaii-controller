@@ -22,8 +22,12 @@ namespace
 {
     auto log_error(hw::Error error) -> void
     {
-        // hwm::print(workout.monitor, String((int)error.cause, 10) + " " + String((int)error.payload.erased, 10));
-        hwm::print(workout.monitor, "hss");
+        if (error.cause == hw::ErrorCause::Accelerator)
+            hwm::print(workout.monitor, "Что-то с датчиком :D");
+        else if (error.cause == hw::ErrorCause::Connection)
+            hwm::print(workout.monitor, "Что-то с сетью :D");
+        else
+            hwm::print(workout.monitor, String((int)error.cause, 10) + " " + String((int)error.payload.erased, 10));
     }
 }
 
@@ -42,8 +46,7 @@ auto setup() -> void
     };
 
     Wire.begin();
-    Serial.begin(9600);
-    while (!Serial);
+    Wire.setWireTimeout(5000);
 
     hw::Error e = hw::init(workout, config);
     if (e.cause != hw::ErrorCause::None)

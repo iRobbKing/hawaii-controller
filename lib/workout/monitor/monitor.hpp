@@ -1,6 +1,7 @@
 #ifndef HAWAII_WORKOUT_MONITOR_H
 #define HAWAII_WORKOUT_MONITOR_H
 
+#include <Arduino.h>
 #include <Wire.h>
 #include <iarduino_OLED_txt_I2C.h>
 #include <iarduino_OLED_txt.h>

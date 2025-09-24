@@ -10,13 +10,13 @@ namespace hawaii::workout
 
         monitor::init(workout.monitor);
 
+        monitor::print(workout.monitor, "Привет)");
+
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
 
-        Serial.println(1);
         accelerator::Error const accelerator_error = accelerator::init(workout.accelerator, config.accelerator);
-        Serial.println(2);
         if (accelerator_error != accelerator::Error::None)
         {
             error.cause = ErrorCause::Accelerator;
@@ -24,9 +24,7 @@ namespace hawaii::workout
             return error;
         }
 
-        Serial.println(3);
         connection::Error const connection_error = connection::init(workout.connection, config.connection);
-        Serial.println(4);
         if (connection_error != connection::Error::None) {
             error.cause = ErrorCause::Connection;
             error.payload.connection = connection_error;
@@ -91,8 +89,11 @@ namespace hawaii::workout
             workout.clear_color_in = 3000;
         }
 
-        if (round(millis() / 1000) % 5 == 0)
+        static bool sent = false;
+
+        if (!sent && round(millis() / 1000) % 5 == 0)
         {
+            sent = true;
             connection::Error const send_message_error = connection::send_ping(workout.connection, config.connection);
             if (send_message_error != connection::Error::None)
             {
@@ -100,6 +101,9 @@ namespace hawaii::workout
                 error.payload.connection = send_message_error;
                 return error;
             }
+        } else
+        {
+            sent = false;
         }
 
         // TODO: ticks from ddd? since we have to call this from int callback from loop
@@ -138,12 +142,6 @@ namespace hawaii::workout
                     workout.set_color_at = now_ms;
                     workout.clear_color_in = 200;
                 }
-
-                Serial.print(" Удар ");
-                Serial.print(++ccc);
-                Serial.print(" ");
-                Serial.print(acceleration);
-                Serial.println();
 
                 connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
                 if (send_message_error != connection::Error::None) {

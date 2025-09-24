@@ -16,7 +16,7 @@ namespace hawaii::workout
     };
 
     unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 250;
-    float constexpr NOISE_LIMIT = 0.25f;
+    float constexpr NOISE_LIMIT = 0.4f;
 
     struct State
     {

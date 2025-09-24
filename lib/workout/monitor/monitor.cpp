@@ -1,6 +1,5 @@
 #include "monitor.hpp"
 
-extern uint8_t SmallFontRus[];  
 
 namespace hawaii::workout::monitor
 {

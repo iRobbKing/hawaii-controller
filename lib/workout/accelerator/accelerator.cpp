@@ -65,11 +65,12 @@ namespace
         }
     }
 
+    int ax_offset, ay_offset, az_offset; // Вычисляемы значения отклонений.
+    int gx_offset, gy_offset, gz_offset;
+    int mean[6] = {0, 0, 0, 0, 0, 0}; // Предполагаемое отклонение.
+
     void calibrate(MPU6050 mpu)
     {
-        int ax_offset, ay_offset, az_offset; // Вычисляемы значения отклонений.
-        int gx_offset, gy_offset, gz_offset;
-        int mean[6] = {0, 0, 0, 0, 0, 0}; // Предполагаемое отклонение.
         const int acel_deadzone = 10;     // точность калибровки акселерометра (по умолчанию 8).
         const int gyro_deadzone = 6;      // точность калибровки гироскопа (по умолчанию 2).
 
@@ -186,14 +187,11 @@ namespace hawaii::workout::accelerator
 {
     auto init(System &accelerator, Config &config) -> Error
     {
-        Serial.println(11);
         if (!init_mpu(accelerator))
             return Error::FailedToInitMpu;
-        Serial.println(12);
         // if (!init_mpu_dmp(accelerator))
         //     return Error::FailedToInitDmp;
         calibrate_mpu(accelerator, config);
-        Serial.println(13);
         // Serial.println("calibrated");
         // set_mpu_interrupt(accelerator, config);
         // Serial.println("interrupt set");
@@ -201,9 +199,27 @@ namespace hawaii::workout::accelerator
         return Error::None;
     }
 
+    auto is_connected(System &accelerator) -> bool
+    {
+        return accelerator.mpu.testConnection();
+    }
+
+    // bool is_disconnected = false;
+
     auto get_acceleration(System &accelerator, Config &config) -> float
     {
         double average_acceleration = 0;
+
+        // if (is_disconnected)
+        // {
+        //     if (accelerator.mpu.initialize())
+        // }
+
+        // if (!is_connected(accelerator))
+        // {
+        //     is_disconnected = true;
+        //     return 0.0f;
+        // }
 
         int constexpr sample = 60;
         for (int i = 0; i < sample; ++i)
