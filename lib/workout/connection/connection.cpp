@@ -115,17 +115,23 @@ namespace hawaii::workout::connection
     auto send_ping(System &connection, Config const& config) -> void
     {
         Topic constexpr topic = "controller/ping";
-        connection.mqtt.publish(topic, (Payload)config.controller_mac);
+
+        char payload[sizeof(config.controller_mac) + 1];
+        memcpy(payload, config.controller_mac, sizeof(config.controller_mac));
+        payload[sizeof(config.controller_mac)] = '\0';
+
+        connection.mqtt.publish(topic, payload);
     }
 
     auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
     {
         Topic constexpr topic = "accelerator/acceleration";
 
-        uint8_t payload[sizeof(config.controller_mac) + sizeof(acceleration)];
+        char payload[sizeof(config.controller_mac) + sizeof(acceleration) + 1];
         memcpy(payload, config.controller_mac, sizeof(config.controller_mac));
         memcpy(payload + sizeof(config.controller_mac), &acceleration, sizeof(acceleration));
+        payload[sizeof(config.controller_mac) + sizeof(acceleration)] = '\0';
         
-        connection.mqtt.publish(topic, (Payload)payload);
+        connection.mqtt.publish(topic, payload);
     }
 }
