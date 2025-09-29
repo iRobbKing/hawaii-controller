@@ -7,9 +7,6 @@ namespace
     [[nodiscard]] auto init_ethernet(hwc::System &connection, hwc::Config &config) -> bool
     {
         return Ethernet.begin(config.controller_mac);
-        // Ethernet.begin(config.controller_mac, config.controller_ip);
-        // Serial.println(Ethernet.localIP());
-        // return true;
     }
 
     byte mac_address[6] = { 0, 0, 0, 0, 0, 0 };
@@ -17,34 +14,20 @@ namespace
     uint32_t received_setcolor_color = 0;
     bool has_received_dev_mode = false;
     bool received_dev_mode = false;
-    bool received_show_me = false;
 
     auto callback(char* topic, byte* payload, unsigned int length) -> void
     {
         if (!strcmp(topic, "d"))
         {
             has_received_dev_mode = true;
-            received_dev_mode = *((bool*)payload);
+            memcpy(&received_dev_mode, payload, sizeof(received_dev_mode));
             return;    
         }
 
-        if (length == sizeof(mac_address) && !strcmp(topic, "s"))
-        {
-            received_show_me = !(payload[4] != 254 && mac_address[4] != payload[4] || payload[5] != 170 && mac_address[5] != payload[5]);
-
-            return;
-        }
-
-        if (length != sizeof(mac_address) + sizeof(received_setcolor_color))
-            return;
-
-        if (payload[4] != 254 && mac_address[4] != payload[4] || payload[5] != 170 && mac_address[5] != payload[5])
-            return;
-
-        if (!strcmp(topic, "l"))
+        if ((length == sizeof(mac_address) + sizeof(received_setcolor_color)) && !strcmp(topic, "l"))
         {
             has_received_setcolor = true;
-            received_setcolor_color = *((uint32_t*)(payload + sizeof(mac_address)));
+            memcpy(&received_setcolor_color, payload + sizeof(mac_address), sizeof(received_setcolor_color));
         } 
     }
 
@@ -54,13 +37,13 @@ namespace
         connection.mqtt.setServer(config.mqtt_server_address, config.mqtt_server_port);
         connection.mqtt.setCallback(callback);
 
-        bool result = connection.mqtt.connect(config.mqtt_client_id);
+        if (connection.mqtt.connect(config.mqtt_client_id))
+        {
+            connection.mqtt.subscribe("l");
+            connection.mqtt.subscribe("d");
+        }
 
-        connection.mqtt.subscribe("l");
-        connection.mqtt.subscribe("d");
-        connection.mqtt.subscribe("s");
-
-        return result;
+        return connection.mqtt.connected();
     }
 }
 
@@ -68,26 +51,44 @@ namespace hawaii::workout::connection
 {
     auto init(System &connection, Config &config) -> Error
     {
-        memcpy(mac_address, config.controller_mac, sizeof(mac_address));
+        if (!init_ethernet(connection, config))
+            return Error::FailedToGetIp;
 
-        if (!init_ethernet(connection, config)) return Error::FailedToGetIp;;
-        if (!init_mqtt(connection, config)) return Error::FailedToInitMqtt;
+        if (!init_mqtt(connection, config))
+            return Error::FailedToInitMqtt;
 
         return Error::None;
     }
 
-    auto reconnect(System &connection, Config const& config) -> bool
+    auto loop(System &connection, Config const& config, unsigned long const now) -> bool
     {
-        bool result = connection.mqtt.connect(config.mqtt_client_id);
-
-        if (result)
+        if (connection.mqtt.connected())
         {
-            connection.mqtt.subscribe("l");
-            connection.mqtt.subscribe("d");
-            connection.mqtt.subscribe("s");
+            connection.mqtt.loop();
+            return true;
         }
+        else
+        {
+            static unsigned long last_reconnect_time = 0;
+            if (5000 < now - last_reconnect_time)
+            {
+                last_reconnect_time = now;
 
-        return connection.mqtt.connected();
+                if (connection.mqtt.connect(config.mqtt_client_id))
+                {
+                    connection.mqtt.subscribe("l");
+                    connection.mqtt.subscribe("d");
+                }
+
+                if (connection.mqtt.connected())
+                {
+                    last_reconnect_time = 0;
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     auto try_get_setcolor(uint32_t& out_color) -> bool
@@ -111,29 +112,20 @@ namespace hawaii::workout::connection
         }
     }
 
-    auto try_get_show_me(bool& out_is_enabled) -> void
-    {
-        out_is_enabled = received_show_me;
-        received_show_me = false;
-    }
-
-    auto send_ping(System &connection, Config const& config) -> Error
+    auto send_ping(System &connection, Config const& config) -> void
     {
         Topic constexpr topic = "controller/ping";
-
-        if (connection.mqtt.publish(topic, (Payload)config.controller_mac)) return Error::None;
-        return Error::FailedToSendMessage;
+        connection.mqtt.publish(topic, (Payload)config.controller_mac);
     }
 
-    auto send_acceleration(System &connection, Config const& config, float const acceleration) -> Error
+    auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
     {
         Topic constexpr topic = "accelerator/acceleration";
 
         uint8_t payload[sizeof(config.controller_mac) + sizeof(acceleration)];
         memcpy(payload, config.controller_mac, sizeof(config.controller_mac));
         memcpy(payload + sizeof(config.controller_mac), &acceleration, sizeof(acceleration));
-
-        if (connection.mqtt.publish(topic, (Payload)payload)) return Error::None;
-        return Error::FailedToSendMessage;
+        
+        connection.mqtt.publish(topic, (Payload)payload);
     }
 }

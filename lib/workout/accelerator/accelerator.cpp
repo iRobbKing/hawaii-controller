@@ -4,28 +4,6 @@ namespace
 {
     namespace hwa = hawaii::workout::accelerator;
 
-    [[nodiscard]] auto init_mpu(hwa::System &accelerator) -> bool
-    {
-        accelerator.mpu.initialize();
-
-        return true;
-    }
-
-    // [[nodiscard]] auto get_accelerator_sensitivity_range(ACCEL_FS sensitivity) -> uint8_t
-    // {
-    //     switch (sensitivity)
-    //     {
-    //     case ACCEL_FS::A2G:
-    //         return MPU6050_ACCEL_FS_2;
-    //     case ACCEL_FS::A4G:
-    //         return MPU6050_ACCEL_FS_4;
-    //     case ACCEL_FS::A8G:
-    //         return MPU6050_ACCEL_FS_8;
-    //     case ACCEL_FS::A16G:
-    //         return MPU6050_ACCEL_FS_16;
-    //     }
-    // }
-
     // Считывание показателей акселерометра.
     void mean_sensors(
         MPU6050 mpu,
@@ -151,52 +129,15 @@ namespace
                 break;
         }
     }
-
-    auto calibrate_mpu(hwa::System &accelerator, hwa::Config &config) -> void
-    {
-        calibrate(accelerator.mpu);
-    }
-
-    // auto set_mpu_interrupt(hwa::System &accelerator, hwa::Config &config) -> void
-    // {
-    //     accelerator.mpu.setSleepEnabled(false);
-
-    //     accelerator.mpu.setMotionDetectionThreshold(config.motion_threshold_lsb);
-    //     accelerator.mpu.setMotionDetectionDuration(config.motion_duration_threshold_ms);
-    //     accelerator.mpu.setIntMotionEnabled(true);
-
-    //     accelerator.mpu.setIntFIFOBufferOverflowEnabled(true);
-
-    //     accelerator.mpu.setIntDMPEnabled(true);
-    //     accelerator.mpu.setInterruptLatch(true);
-    //     accelerator.mpu.setInterruptLatchClear(true);
-    // }
-
-    // auto init_mpu_dmp(hwa::System &accelerator) -> bool
-    // {
-    //     if (accelerator.mpu.dmpInitialize() != 0)
-    //         return false;
-
-    //     accelerator.mpu.setDMPEnabled(true);
-
-    //     return true;
-    // }
 }
 
 namespace hawaii::workout::accelerator
 {
-    auto init(System &accelerator, Config &config) -> Error
+    auto init(System &accelerator, Config &config) -> void
     {
-        if (!init_mpu(accelerator))
-            return Error::FailedToInitMpu;
-        // if (!init_mpu_dmp(accelerator))
-        //     return Error::FailedToInitDmp;
-        calibrate_mpu(accelerator, config);
-        // Serial.println("calibrated");
-        // set_mpu_interrupt(accelerator, config);
-        // Serial.println("interrupt set");
+        accelerator.mpu.initialize();
 
-        return Error::None;
+        calibrate(accelerator.mpu);
     }
 
     auto is_connected(System &accelerator) -> bool
@@ -204,24 +145,11 @@ namespace hawaii::workout::accelerator
         return accelerator.mpu.testConnection();
     }
 
-    // bool is_disconnected = false;
-
     auto get_acceleration(System &accelerator, Config &config) -> float
     {
         double average_acceleration = 0;
 
-        // if (is_disconnected)
-        // {
-        //     if (accelerator.mpu.initialize())
-        // }
-
-        // if (!is_connected(accelerator))
-        // {
-        //     is_disconnected = true;
-        //     return 0.0f;
-        // }
-
-        int constexpr sample = 60;
+        int constexpr sample = 30;
         for (int i = 0; i < sample; ++i)
         {
             // Все пробивают 2G и 4G, пожтому перезодим на 8G.
@@ -241,69 +169,10 @@ namespace hawaii::workout::accelerator
             double const acceleration = sqrt(aMc2X * aMc2X + aMc2Y * aMc2Y);
 
             average_acceleration += acceleration / sample;
+
+            delay(2);
         }
 
         return average_acceleration;
     }
-
-    // auto _get_acceleration(System &accelerator, Config &config, Vector &out_acceleration) -> Error
-    // {
-    //     uint16_t const mpu_dmp_packet_size = accelerator.mpu.dmpGetFIFOPacketSize();
-    //     uint8_t const mpu_int_status = accelerator.mpu.getIntStatus();
-    //     accelerator.mpu_dmp_current_packet_size = accelerator.mpu.getFIFOCount();
-
-    //     if ((mpu_int_status & (1 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || accelerator.mpu_dmp_current_packet_size >= 1024)
-    //     {
-    //         // if overflowed
-    //         accelerator.mpu.resetFIFO();
-    //         accelerator.mpu_dmp_current_packet_size = accelerator.mpu.getFIFOCount();
-    //         // TODO: this shouldn be error?? handle restart mid training?
-    //         // return Error::MpuFifoOverflow;
-    //     }
-    //     else if (mpu_int_status & (1 << MPU6050_INTERRUPT_DMP_INT_BIT))
-    //     {
-    //         // if interruped and data ready
-    //         while (accelerator.mpu_dmp_current_packet_size < mpu_dmp_packet_size)
-    //             accelerator.mpu_dmp_current_packet_size = accelerator.mpu.getFIFOCount();
-
-    //         uint8_t fifo_buffer[64];
-    //         accelerator.mpu.getFIFOBytes(fifo_buffer, mpu_dmp_packet_size);
-
-    //         accelerator.mpu_dmp_current_packet_size -= mpu_dmp_packet_size;
-
-    //         Quaternion quaternion;
-    //         accelerator.mpu.dmpGetQuaternion(&quaternion, fifo_buffer);
-    //         VectorInt16 acceleration;
-    //         accelerator.mpu.dmpGetAccel(&acceleration, fifo_buffer);
-    //         VectorFloat gravity;
-    //         accelerator.mpu.dmpGetGravity(&gravity, &quaternion);
-    //         VectorInt16 liniar_acceleration;
-    //         accelerator.mpu.dmpGetLinearAccel(&liniar_acceleration, &acceleration, &gravity);
-
-    //         out_acceleration.x = (float)liniar_acceleration.x;
-    //         out_acceleration.y = (float)liniar_acceleration.y;
-    //         out_acceleration.z = (float)liniar_acceleration.z;
-
-    //         //             float sensitivity_lsb_per_g = 16384.0f; // default to 2g
-    //         // switch (config.sensitivity) {
-    //         //     case ACCEL_FS::A2G:  sensitivity_lsb_per_g = 16384.0f; break;
-    //         //     case ACCEL_FS::A4G:  sensitivity_lsb_per_g = 8192.0f; break;
-    //         //     case ACCEL_FS::A8G:  sensitivity_lsb_per_g = 4096.0f; break;
-    //         //     case ACCEL_FS::A16G: sensitivity_lsb_per_g = 2048.0f; break;
-    //         // }
-
-    //         // const float g_to_mps2 = 9.80665f;
-    //         // out_acceleration.x = (liniar_acceleration.x / sensitivity_lsb_per_g) * g_to_mps2;
-    //         // out_acceleration.y = (liniar_acceleration.y / sensitivity_lsb_per_g) * g_to_mps2;
-    //         // out_acceleration.z = (liniar_acceleration.z / sensitivity_lsb_per_g) * g_to_mps2;
-
-    //         return Error::None;
-    //     }
-
-    //     out_acceleration.x = 0;
-    //     out_acceleration.y = 0;
-    //     out_acceleration.z = 0;
-
-    //     return Error::None;
-    // }
 }

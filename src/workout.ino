@@ -10,76 +10,57 @@
 namespace hw = hawaii::workout;
 namespace hwa = hw::accelerator;
 namespace hwc = hw::connection;
-namespace hwm = hw::monitor;
+namespace hwl = hw::lamp;
 
 hw::Config config{};
 hw::System workout{};
 hw::State state{};
 
-hw::Error error;
-
-namespace
-{
-    auto log_error(hw::Error error) -> void
-    {
-        if (error.cause == hw::ErrorCause::Accelerator)
-            hwm::print(workout.monitor, "Что-то с датчиком :D");
-        else if (error.cause == hw::ErrorCause::Connection)
-            hwm::print(workout.monitor, "Что-то с сетью :D");
-        else
-            hwm::print(workout.monitor, String((int)error.cause, 10) + " " + String((int)error.payload.erased, 10));
-    }
-}
+bool is_error = false;
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 auto setup() -> void
 {
-    error.cause = hw::ErrorCause::None;
-    error.payload.erased = 0;
-
     config = hw::Config{
         { ACCEL_FS::A8G },
         { { MAC }, IPAddress{192, 168, 2, 128}, IPAddress{SERVER}, 1883, TOSTRING(CLIENT_ID), "testuser", "123" },
         { 24,  6, 255 }
     };
 
-    Wire.begin();
-    Wire.setWireTimeout(5000);
+    Serial.begin(9600);
+    while (!Serial);
 
-    hw::Error e = hw::init(workout, config);
-    if (e.cause != hw::ErrorCause::None)
+    Wire.begin();
+    Wire.setWireTimeout();
+
+    hw::Error error = hw::init(workout, config);
+    if (error.cause != hw::ErrorCause::None)
     {
-        log_error(e);
-        error = e;
-        return;
+        is_error = true;
+        hwl::set_color(workout.lamp, 0xFFFF0000);
+        Serial.print("Error: ");
+        Serial.print(static_cast<int>(error.cause));
+        Serial.print(' ');
+        Serial.println(error.payload.erased);
     }
 }
 
 auto loop() -> void
 {
-    if (error.cause != hw::ErrorCause::None)
+    unsigned long const now = millis();
+
+    if (hw::run(workout, config, state, now))
     {
-        if (hw::handle_error(workout, config, error))
-        {
-            error.cause = hw::ErrorCause::None;
-            error.payload.erased = 0;
-        }
-        else
-        {
-            return;
-        }
-
+        if (is_error)
+            hwl::set_color(workout.lamp, 0);
+        is_error = false;
     }
-
-    hw::Error e = hw::run(workout, config, state);
-    if (e.cause != hw::ErrorCause::None)
+    else 
     {
-        log_error(e);
-        error = e;
-        return;
+        if (!is_error)
+            hwl::set_color(workout.lamp, 0xFFFF0000);
+        is_error = true;
     }
-
-    workout.connection.mqtt.loop();
 }

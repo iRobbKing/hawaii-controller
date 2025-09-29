@@ -4,7 +4,6 @@
 #include "accelerator/accelerator.hpp"
 #include "connection/connection.hpp"
 #include "lamp/lamp.hpp"
-#include "monitor/monitor.hpp"
 
 namespace hawaii::workout
 {
@@ -21,8 +20,9 @@ namespace hawaii::workout
     struct State
     {
         float punchbag_acceleration = 0;
-        unsigned long last_hit_time_ms = HIT_DEBOUNCE_TIME_MS;
+        unsigned long last_hit_time_ms = 0;
         AccelerationDelta delta = AccelerationDelta::Noise;
+        unsigned long last_ping_time = 0;
     };
 
     enum struct ErrorCause
@@ -57,7 +57,6 @@ namespace hawaii::workout
         accelerator::System accelerator;
         connection::System connection;
         lamp::System lamp;
-        monitor::System monitor;
         bool need_to_clear_color = false;
         uint64_t set_color_at;
         uint64_t clear_color_in;
@@ -66,8 +65,7 @@ namespace hawaii::workout
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;
-    [[nodiscard]] auto handle_error(System &workout, Config const& config, Error error) -> bool;
-    [[nodiscard]] auto run(System &workout, Config &config, State &state) -> Error;
+    [[nodiscard]] auto run(System &workout, Config &config, State &state, unsigned long now) -> bool;
 }
 
 #endif

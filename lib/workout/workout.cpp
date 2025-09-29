@@ -1,28 +1,58 @@
 #include "workout.hpp"
 
+namespace
+{
+    namespace hw = hawaii::workout;
+    namespace hwa = hw::accelerator;
+    namespace hwl = hw::lamp;
+
+    auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
+    {
+        acceleration = hwa::get_acceleration(workout.accelerator, config.accelerator);
+
+        if (acceleration < hw::NOISE_LIMIT)
+        {
+            state.punchbag_acceleration = 0;
+            state.delta = hw::AccelerationDelta::Noise;
+            return false;
+        }
+
+        if (acceleration <= state.punchbag_acceleration)
+        {
+            state.punchbag_acceleration = acceleration;
+            state.delta = hw::AccelerationDelta::Decreasing;
+            return false;
+        }
+
+        if (state.delta != hw::AccelerationDelta::Increasing)
+        {
+            state.punchbag_acceleration = acceleration;
+            state.delta = hw::AccelerationDelta::Increasing;
+
+            if (hw::HIT_DEBOUNCE_TIME_MS <= now - state.last_hit_time_ms)
+            {
+                state.last_hit_time_ms = now;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 namespace hawaii::workout
 {
     auto init(System &workout, Config &config) -> Error
     {
-        lamp::init(workout.lamp, config.lamp);
-
-        lamp::set_color(workout.lamp, 0xFFFFFF00);
-
-        monitor::init(workout.monitor);
-
-        monitor::print(workout.monitor, "Привет)");
-
         Error error;
         error.cause = ErrorCause::None;
         error.payload.erased = 0;
 
-        accelerator::Error const accelerator_error = accelerator::init(workout.accelerator, config.accelerator);
-        if (accelerator_error != accelerator::Error::None)
-        {
-            error.cause = ErrorCause::Accelerator;
-            error.payload.accelerator = accelerator_error;
-            return error;
-        }
+        lamp::init(workout.lamp, config.lamp);
+        lamp::set_color(workout.lamp, 0xFFFFFF00);
+
+        accelerator::init(workout.accelerator, config.accelerator);
 
         connection::Error const connection_error = connection::init(workout.connection, config.connection);
         if (connection_error != connection::Error::None) {
@@ -36,30 +66,17 @@ namespace hawaii::workout
         return error;
     }
 
-    auto handle_error(System &workout, Config const& config, Error error) -> bool
+    auto run(System &workout, Config &config, State &state, unsigned long const now) -> bool
     {
-        if (round(millis() / 1000) % 3 == 0)
-            lamp::set_color(workout.lamp, 0xFFFF0000);
-        else
-            lamp::set_color(workout.lamp, 0);
+        if (!connection::loop(workout.connection, config.connection, now))
+            return false;
 
-        if (round(millis() / 1000) % 5 == 0 && error.cause == ErrorCause::Connection)
+        if (workout.need_to_clear_color && workout.clear_color_in <= now - workout.set_color_at)
         {
-            return connection::reconnect(workout.connection, config.connection);
+            workout.need_to_clear_color = false;
+            lamp::set_color(workout.lamp, 0);
         }
 
-        return false;
-    }
-
-    int ccc = 0;
-
-    auto run(System &workout, Config &config, State &state) -> Error
-    {
-        Error error;
-        error.cause = ErrorCause::None;
-        error.payload.erased = 0;
-
-        uint64_t const now = millis();
         uint32_t setcolor_color;
         if (connection::try_get_setcolor(setcolor_color))
         {
@@ -71,15 +88,6 @@ namespace hawaii::workout
         
         connection::try_get_dev_mode(workout.show_hit);
 
-        // TODO: fix overflow
-        if (workout.need_to_clear_color && workout.clear_color_in <= now - workout.set_color_at)
-        {
-            workout.need_to_clear_color = false;
-            lamp::set_color(workout.lamp, 0);
-        }
-
-        connection::try_get_show_me(workout.need_to_show_me);
-
         if (workout.need_to_show_me)
         {
             workout.need_to_show_me = false;
@@ -89,71 +97,26 @@ namespace hawaii::workout
             workout.clear_color_in = 3000;
         }
 
-        static bool sent = false;
-
-        if (!sent && round(millis() / 1000) % 5 == 0)
+        if (5000 < now - state.last_ping_time)
         {
-            sent = true;
-            connection::Error const send_message_error = connection::send_ping(workout.connection, config.connection);
-            if (send_message_error != connection::Error::None)
+            state.last_ping_time = now;
+            connection::send_ping(workout.connection, config.connection);
+        }
+
+        float acceleration;
+        if (get_acceleration(workout, config, state, now, acceleration))
+        {
+            if (workout.show_hit)
             {
-                error.cause = ErrorCause::Connection;
-                error.payload.connection = send_message_error;
-                return error;
-            }
-        } else
-        {
-            sent = false;
-        }
-
-        // TODO: ticks from ddd? since we have to call this from int callback from loop
-        // and only call get_acceleration if there is data
-
-        float const acceleration = accelerator::get_acceleration(workout.accelerator, config.accelerator);
-
-        if (acceleration < NOISE_LIMIT)
-        {
-            state.punchbag_acceleration = 0;
-            state.delta = AccelerationDelta::Noise;
-            return error;
-        }
-
-        if (acceleration <= state.punchbag_acceleration)
-        {
-            state.punchbag_acceleration = acceleration;
-            state.delta = AccelerationDelta::Decreasing;
-            return error;
-        }
-
-        if (state.delta != AccelerationDelta::Increasing)
-        {
-            state.punchbag_acceleration = acceleration;
-            state.delta = AccelerationDelta::Increasing;
-
-            unsigned long const now_ms = millis();
-            if (HIT_DEBOUNCE_TIME_MS <= now_ms - state.last_hit_time_ms)
-            {
-                state.last_hit_time_ms = now_ms;
-
-                if (workout.show_hit)
-                {
-                    lamp::set_color(workout.lamp, 0xFFFF00FF);
-                    workout.need_to_clear_color = true;
-                    workout.set_color_at = now_ms;
-                    workout.clear_color_in = 200;
-                }
-
-                connection::Error const send_message_error = connection::send_acceleration(workout.connection, config.connection, acceleration);
-                if (send_message_error != connection::Error::None) {
-                    error.cause = ErrorCause::Connection;
-                    error.payload.connection = send_message_error;
-                    return error;
-                }
+                hwl::set_color(workout.lamp, 0xFFFF00FF);
+                workout.need_to_clear_color = true;
+                workout.set_color_at = now;
+                workout.clear_color_in = 200;
             }
 
-            return error;
+            connection::send_acceleration(workout.connection, config.connection, acceleration);
         }
 
-        return error;
+        return true;
     }
 }

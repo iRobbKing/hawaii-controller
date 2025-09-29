@@ -31,7 +31,7 @@ namespace hawaii::workout::accelerator
         uint16_t mpu_dmp_current_packet_size;
     };
 
-    [[nodiscard]] auto init(System &accelerator, Config &config) -> Error;
+    [[nodiscard]] auto init(System &accelerator, Config &config) -> void;
     [[nodiscard]] auto get_acceleration(System &accelerator, Config &config) -> float;
 }
 
