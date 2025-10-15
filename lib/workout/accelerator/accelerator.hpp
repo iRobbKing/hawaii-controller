@@ -14,8 +14,6 @@ namespace hawaii::workout::accelerator
     {
         None = 0,
         FailedToInitMpu = 1,
-        FailedToInitDmp = 2,
-        MpuFifoOverflow = 3,
     };
 
     // TODO: dont expose ACCEL_FS
@@ -31,8 +29,9 @@ namespace hawaii::workout::accelerator
         uint16_t mpu_dmp_current_packet_size;
     };
 
-    [[nodiscard]] auto init(System &accelerator, Config &config) -> void;
-    [[nodiscard]] auto get_acceleration(System &accelerator, Config &config) -> float;
+    auto init(System &accelerator, Config &config) -> void;
+    auto reinit(System &accelerator) -> void;
+    [[nodiscard]] auto get_acceleration(System &accelerator, Config &config, float &out_acceleration) -> bool;
 }
 
 #endif

@@ -1,4 +1,5 @@
 #include "accelerator.hpp"
+#include <Arduino.h>
 
 namespace
 {
@@ -49,11 +50,10 @@ namespace
 
     void calibrate(MPU6050 mpu)
     {
-        const int acel_deadzone = 10;     // точность калибровки акселерометра (по умолчанию 8).
-        const int gyro_deadzone = 6;      // точность калибровки гироскопа (по умолчанию 2).
+        int constexpr acel_deadzone = 10;     // точность калибровки акселерометра (по умолчанию 8).
+        int constexpr gyro_deadzone = 6;      // точность калибровки гироскопа (по умолчанию 2).
 
-        // Максимальное количество итераций для калибровки.
-        byte vNumColibrations = 30;
+        byte constexpr max_calibrations = 30;
         // Задаем диапазон ускорений в +/-16G. Знаменатель 2048.
         // mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
         // Задаем диапазон ускорений в +/-8G.  Знаменатель 4096.
@@ -63,7 +63,7 @@ namespace
         // Задаем диапазон ускорений в +/-2G.  Знаменатель 16384.
         // mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
         // Задаем максимальную угловуюскорость +/-250м/с
-        mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
+        // mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
         // Сброс показателей акселерометра.
         mpu.setXAccelOffset(0);
         mpu.setYAccelOffset(0);
@@ -72,19 +72,17 @@ namespace
         mpu.setYGyroOffset(0);
         mpu.setZGyroOffset(0);
 
-        ax_offset = -mean[0] / 8; // 8 - размер байта в микроконтроллере??? Обсудить.
+        ax_offset = -mean[0] / 8;
         ay_offset = -mean[1] / 8;
         az_offset = -mean[2] / 8;
-        gx_offset = -mean[3] / 4; // 4 - размер байта в микроконтроллере??? Обсудить.
+        gx_offset = -mean[3] / 4;
         gy_offset = -mean[4] / 4;
         gz_offset = -mean[5] / 4;
 
-        // Калибровка очень точный процесс и может идти долго.
-        // Поэтому делаем заданное число измерений.
-        // Но, если кабировка пройдет быстрее, то процесс прервется.
-        for (byte vCnt = 0; vCnt <= vNumColibrations; vCnt++)
+        for (byte i = 0; i < max_calibrations; ++i)
         {
             int ready = 0;
+
             mpu.setXAccelOffset(ax_offset);
             mpu.setYAccelOffset(ay_offset);
             mpu.setZAccelOffset(az_offset);
@@ -92,35 +90,35 @@ namespace
             mpu.setYGyroOffset(gy_offset);
             mpu.setZGyroOffset(gz_offset);
 
-            // Вычисление средних показателей.
             mean_sensors(mpu, mean);
+
             if (abs(mean[0]) <= acel_deadzone)
-                ready++;
+                ++ready;
             else
                 ax_offset -= mean[0] / acel_deadzone;
 
             if (abs(mean[1]) <= acel_deadzone)
-                ready++;
+                ++ready;
             else
                 ay_offset -= mean[1] / acel_deadzone;
 
             if (abs(mean[2]) <= acel_deadzone)
-                ready++;
+                ++ready;
             else
                 az_offset -= mean[2] / acel_deadzone;
 
             if (abs(mean[3]) <= gyro_deadzone)
-                ready++;
+                ++ready;
             else
                 gx_offset -= mean[3] / (mean[3] + 1);
 
             if (abs(mean[4]) <= gyro_deadzone)
-                ready++;
+                ++ready;
             else
                 gy_offset -= mean[4] / (gyro_deadzone + 1);
 
             if (abs(mean[5]) <= gyro_deadzone)
-                ready++;
+                ++ready;
             else
                 gz_offset -= mean[5] / (gyro_deadzone + 1);
             // Выходим, если процесс калибровки будет выполне
@@ -140,39 +138,44 @@ namespace hawaii::workout::accelerator
         calibrate(accelerator.mpu);
     }
 
-    auto is_connected(System &accelerator) -> bool
+    auto reinit(System &accelerator) -> void
     {
-        return accelerator.mpu.testConnection();
+        accelerator.mpu.initialize();
+
+        accelerator.mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
+
+        accelerator.mpu.setXAccelOffset(ax_offset);
+        accelerator.mpu.setYAccelOffset(ay_offset);
+        accelerator.mpu.setZAccelOffset(az_offset);
+        accelerator.mpu.setXGyroOffset(gx_offset);
+        accelerator.mpu.setYGyroOffset(gy_offset);
+        accelerator.mpu.setZGyroOffset(gz_offset);
     }
 
-    auto get_acceleration(System &accelerator, Config &config) -> float
+    auto get_acceleration(System &accelerator, Config &config, float &out_acceleration) -> bool
     {
+        int constexpr samples = 60;
         double average_acceleration = 0;
 
-        int constexpr sample = 30;
-        for (int i = 0; i < sample; ++i)
+        for (int i = 0; i < samples; ++i)
         {
-            // Все пробивают 2G и 4G, пожтому перезодим на 8G.
-            // 16g = 2048, 8g = 4096, 4g = 8192, 2g = 16384;
-            // float constexpr gValue = 16384.0f;
-            float constexpr gValue = 4096.0f;
+            if (Wire.getWireTimeoutFlag())
+                return false;
 
-            // читаем показания
             int16_t ax, ay, az;
             accelerator.mpu.getAcceleration(&ax, &ay, &az);
 
-            // переводим в координаты вектора, только в плоскости
-            double const aMc2X = (double)ax / gValue;
-            double const aMc2Y = (double)ay / gValue;
+            float constexpr g = 4096.0f;
 
-            // возращаем длину вектора
-            double const acceleration = sqrt(aMc2X * aMc2X + aMc2Y * aMc2Y);
+            double const a_mc2_x = (double)ax / g;
+            double const a_mc2_y = (double)ay / g;
 
-            average_acceleration += acceleration / sample;
+            double const acceleration = sqrt(a_mc2_x * a_mc2_x + a_mc2_y * a_mc2_y);
 
-            delay(2);
+            average_acceleration += acceleration / samples;
         }
 
-        return average_acceleration;
+        out_acceleration = average_acceleration;
+        return true;
     }
 }

@@ -8,7 +8,20 @@ namespace
 
     auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
     {
-        acceleration = hwa::get_acceleration(workout.accelerator, config.accelerator);
+        if (!hwa::get_acceleration(workout.accelerator, config.accelerator, acceleration))
+        {
+            Wire.clearWireTimeoutFlag();
+
+            Wire.end();
+            delay(30);
+            Wire.begin();
+
+            Wire.setWireTimeout();
+
+            hwa::reinit(workout.accelerator);
+
+            return false;
+        }
 
         if (acceleration < hw::NOISE_LIMIT)
         {

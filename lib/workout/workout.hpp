@@ -4,6 +4,7 @@
 #include "accelerator/accelerator.hpp"
 #include "connection/connection.hpp"
 #include "lamp/lamp.hpp"
+#include <Wire.h>
 
 namespace hawaii::workout
 {
@@ -15,7 +16,7 @@ namespace hawaii::workout
     };
 
     unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 250;
-    float constexpr NOISE_LIMIT = 0.4f;
+    float constexpr NOISE_LIMIT = 0.3f;
 
     struct State
     {

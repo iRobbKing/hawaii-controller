@@ -41,8 +41,8 @@ namespace hawaii::workout::connection
     [[nodiscard]] auto loop(System &connection, Config const& config, unsigned long now) -> bool;
     [[nodiscard]] auto try_get_setcolor(uint32_t& out_color) -> bool;
     auto try_get_dev_mode(bool& out_is_enabled) -> void;
-    [[nodiscard]] auto send_ping(System &connection, Config const& config) -> void;
-    [[nodiscard]] auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
+    auto send_ping(System &connection, Config const& config) -> void;
+    auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
 }
 
 #endif
