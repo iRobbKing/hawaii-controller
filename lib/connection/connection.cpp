@@ -9,7 +9,6 @@ namespace
         return Ethernet.begin(config.controller_mac);
     }
 
-    byte mac_address[6] = { 0, 0, 0, 0, 0, 0 };
     bool has_received_setcolor = false;
     uint32_t received_setcolor_color = 0;
     bool has_received_dev_mode = false;
@@ -24,10 +23,10 @@ namespace
             return;    
         }
 
-        if ((length == sizeof(mac_address) + sizeof(received_setcolor_color)) && !strcmp(topic, "l"))
+        if ((length == sizeof(byte[6]) + sizeof(received_setcolor_color)) && !strcmp(topic, "l"))
         {
             has_received_setcolor = true;
-            memcpy(&received_setcolor_color, payload + sizeof(mac_address), sizeof(received_setcolor_color));
+            memcpy(&received_setcolor_color, payload + sizeof(byte[6]), sizeof(received_setcolor_color));
         } 
     }
 
