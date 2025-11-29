@@ -43,11 +43,18 @@ namespace hawaii::connection
     {
         uint32_t color;
         uint32_t duration_ms;
+        uint8_t controller_id;
+    };
+
+    struct RebootCommand
+    {
+        uint8_t controller_id;
     };
 
     union CommandPayload
     {
         SetColorCommand set_color;
+        RebootCommand reboot;
     };
 
     struct Command

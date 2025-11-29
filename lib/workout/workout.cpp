@@ -93,6 +93,9 @@ namespace hawaii::workout
             {
                 case connection::CommandType::SetColor:
                 {
+                    if (command.payload.set_color.controller_id != config.connection.controller_id)
+                        break;
+
                     lamp::set_color(workout.lamp, command.payload.set_color.color);
                     workout.need_to_clear_color = true;
                     workout.set_color_at = now;
@@ -101,6 +104,9 @@ namespace hawaii::workout
                 }
                 case connection::CommandType::Reboot:
                 {
+                    if (command.payload.reboot.controller_id != config.connection.controller_id)
+                        break;
+
                     // ESP.restart();
                     break;
                 }
