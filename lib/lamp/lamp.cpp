@@ -1,6 +1,6 @@
 ﻿#include "lamp.hpp"
 
-namespace hawaii::workout::lamp
+namespace hawaii::lamp
 {
     auto init(System &lamp, Config &config) -> void
     {

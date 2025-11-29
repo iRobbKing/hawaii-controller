@@ -3,12 +3,12 @@
 namespace
 {
     namespace hw = hawaii::workout;
-    namespace hwa = hw::accelerator;
-    namespace hwl = hw::lamp;
+    namespace ha = hawaii::accelerator;
+    namespace hl = hawaii::lamp;
 
     auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
     {
-        if (!hwa::get_acceleration(workout.accelerator, config.accelerator, acceleration))
+        if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
         {
             Wire.clearWireTimeoutFlag();
 
@@ -18,7 +18,7 @@ namespace
 
             Wire.setWireTimeout();
 
-            hwa::reinit(workout.accelerator);
+            ha::reinit(workout.accelerator);
 
             return false;
         }
@@ -63,7 +63,6 @@ namespace hawaii::workout
         error.payload.erased = 0;
 
         lamp::init(workout.lamp, config.lamp);
-        lamp::set_color(workout.lamp, 0xFFFFFF00);
 
         accelerator::init(workout.accelerator, config.accelerator);
 
@@ -73,8 +72,6 @@ namespace hawaii::workout
             error.payload.connection = connection_error;
             return error;
         }
-
-        lamp::set_color(workout.lamp, 0);
 
         return error;
     }
@@ -121,7 +118,7 @@ namespace hawaii::workout
         {
             if (workout.show_hit)
             {
-                hwl::set_color(workout.lamp, 0xFFFF00FF);
+                hl::set_color(workout.lamp, 0xFFFF00FF);
                 workout.need_to_clear_color = true;
                 workout.set_color_at = now;
                 workout.clear_color_in = 200;

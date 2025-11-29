@@ -1,9 +1,9 @@
 #ifndef HAWAII_WORKOUT_H
 #define HAWAII_WORKOUT_H
 
-#include "accelerator/accelerator.hpp"
-#include "connection/connection.hpp"
-#include "lamp/lamp.hpp"
+#include "../accelerator/accelerator.hpp"
+#include "../connection/connection.hpp"
+#include "../lamp/lamp.hpp"
 #include <Wire.h>
 
 namespace hawaii::workout

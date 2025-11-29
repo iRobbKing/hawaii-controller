@@ -3,8 +3,6 @@
 
 namespace
 {
-    namespace hwa = hawaii::workout::accelerator;
-
     // Считывание показателей акселерометра.
     void mean_sensors(
         MPU6050 mpu,
@@ -129,7 +127,7 @@ namespace
     }
 }
 
-namespace hawaii::workout::accelerator
+namespace hawaii::accelerator
 {
     auto init(System &accelerator, Config &config) -> void
     {

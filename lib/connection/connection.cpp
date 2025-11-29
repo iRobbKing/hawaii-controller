@@ -2,9 +2,9 @@
 
 namespace
 {
-    namespace hwc = hawaii::workout::connection;
+    namespace hc = hawaii::connection;
 
-    [[nodiscard]] auto init_ethernet(hwc::System &connection, hwc::Config &config) -> bool
+    [[nodiscard]] auto init_ethernet(hc::System &connection, hc::Config &config) -> bool
     {
         return Ethernet.begin(config.controller_mac);
     }
@@ -31,7 +31,7 @@ namespace
         } 
     }
 
-    auto init_mqtt(hwc::System &connection, hwc::Config &config) -> bool
+    auto init_mqtt(hc::System &connection, hc::Config &config) -> bool
     {
         connection.mqtt.setClient(connection.ethernet);
         connection.mqtt.setServer(config.mqtt_server_address, config.mqtt_server_port);
@@ -47,7 +47,7 @@ namespace
     }
 }
 
-namespace hawaii::workout::connection
+namespace hawaii::connection
 {
     auto init(System &connection, Config &config) -> Error
     {

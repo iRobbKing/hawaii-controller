@@ -4,7 +4,7 @@
 #include <Ethernet.h>
 #include <PubSubClient.h>
 
-namespace hawaii::workout::connection
+namespace hawaii::connection
 {
     using MacAddress = uint8_t[6];
     using Port = uint16_t;

@@ -8,9 +8,9 @@
 // TODO: publish queue
 
 namespace hw = hawaii::workout;
-namespace hwa = hw::accelerator;
-namespace hwc = hw::connection;
-namespace hwl = hw::lamp;
+namespace ha = hawaii::accelerator;
+namespace hc = hawaii::connection;
+namespace hl = hawaii::lamp;
 
 hw::Config config{};
 hw::System workout{};
@@ -39,7 +39,7 @@ auto setup() -> void
     if (error.cause != hw::ErrorCause::None)
     {
         is_error = true;
-        hwl::set_color(workout.lamp, 0xFFFF0000);
+        hl::set_color(workout.lamp, 0xFFFF0000);
         Serial.print("Error: ");
         Serial.print(static_cast<int>(error.cause));
         Serial.print(' ');
@@ -54,13 +54,13 @@ auto loop() -> void
     if (hw::run(workout, config, state, now))
     {
         if (is_error)
-            hwl::set_color(workout.lamp, 0);
+            hl::set_color(workout.lamp, 0);
         is_error = false;
     }
     else 
     {
         if (!is_error)
-            hwl::set_color(workout.lamp, 0xFFFF0000);
+            hl::set_color(workout.lamp, 0xFFFF0000);
         is_error = true;
     }
 }

@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-namespace hawaii::workout::lamp
+namespace hawaii::lamp
 {
     struct Config
     {
