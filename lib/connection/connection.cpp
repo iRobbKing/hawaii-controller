@@ -62,6 +62,8 @@ namespace hawaii::connection
 
     auto loop(System &connection, Config const& config, unsigned long const now) -> bool
     {
+        Ethernet.maintain();
+
         if (connection.mqtt.connected())
         {
             connection.mqtt.loop();
