@@ -2,15 +2,12 @@
 #define HAWAII_CONNECTION_H
 
 #include <Ethernet.h>
-#include <PubSubClient.h>
+#include <EthernetUdp.h>
 
 namespace hawaii::connection
 {
     using MacAddress = uint8_t[6];
     using Port = uint16_t;
-
-    using Topic = char const*;
-    using Payload = char const*;
 
     enum struct Error
     {
@@ -23,24 +20,53 @@ namespace hawaii::connection
     struct Config
     {
         MacAddress controller_mac;
-        IPAddress controller_ip;
-        IPAddress mqtt_server_address;
-        Port mqtt_server_port;
-        char const *mqtt_client_id;
-        char const *mqtt_username;
-        char const *mqtt_password;
+        IPAddress server_address;
+        Port server_port;
+        Port local_port;
+        uint8_t controller_id;
     };
 
     struct System
     {
         EthernetClient ethernet;
-        PubSubClient mqtt;
+        EthernetUDP udp;
+    };
+
+    enum struct CommandType : uint8_t
+    {
+        SetColor = 1,
+        Reboot = 2,
+        ToggleDevMode = 3
+    };
+
+    struct SetColorCommand
+    {
+        uint32_t color;
+        uint32_t duration_ms;
+    };
+
+    union CommandPayload
+    {
+        SetColorCommand set_color;
+    };
+
+    struct Command
+    {
+        CommandType type;
+        CommandPayload payload;
+    };
+
+    static_assert(sizeof(Command) <= UDP_TX_PACKET_MAX_SIZE, "Command size is too large");
+
+    enum struct Event : uint8_t
+    {
+        Pinged = 1,
+        Accelerated = 2,
     };
 
     [[nodiscard]] auto init(System &connection, Config &config) -> Error;
-    [[nodiscard]] auto loop(System &connection, Config const& config, unsigned long now) -> bool;
-    [[nodiscard]] auto try_get_setcolor(uint32_t& out_color) -> bool;
-    auto try_get_dev_mode(bool& out_is_enabled) -> void;
+    [[nodiscard]] auto loop(System &connection) -> void;
+    [[nodiscard]] auto get_message(System &connection, Command &command) -> bool;
     auto send_ping(System &connection, Config const& config) -> void;
     auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
 }

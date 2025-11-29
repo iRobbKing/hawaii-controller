@@ -78,8 +78,7 @@ namespace hawaii::workout
 
     auto run(System &workout, Config &config, State &state, unsigned long const now) -> bool
     {
-        if (!connection::loop(workout.connection, config.connection, now))
-            return false;
+        connection::loop(workout.connection);
 
         if (workout.need_to_clear_color && workout.clear_color_in <= now - workout.set_color_at)
         {
@@ -87,17 +86,32 @@ namespace hawaii::workout
             lamp::set_color(workout.lamp, 0);
         }
 
-        uint32_t setcolor_color;
-        if (connection::try_get_setcolor(setcolor_color))
+        connection::Command command;
+        if (connection::get_message(workout.connection, command))
         {
-            lamp::set_color(workout.lamp, setcolor_color);
-            workout.need_to_clear_color = true;
-            workout.set_color_at = now;
-            workout.clear_color_in = 444;
+            switch (command.type)
+            {
+                case connection::CommandType::SetColor:
+                {
+                    lamp::set_color(workout.lamp, command.payload.set_color.color);
+                    workout.need_to_clear_color = true;
+                    workout.set_color_at = now;
+                    workout.clear_color_in = command.payload.set_color.duration_ms;
+                    break;
+                }
+                case connection::CommandType::Reboot:
+                {
+                    // ESP.restart();
+                    break;
+                }
+                case connection::CommandType::ToggleDevMode:
+                {
+                    workout.show_hit = !workout.show_hit;
+                    break;
+                }
+            }
         }
         
-        connection::try_get_dev_mode(workout.show_hit);
-
         if (workout.need_to_show_me)
         {
             workout.need_to_show_me = false;

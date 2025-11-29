@@ -1,138 +1,65 @@
 #include "connection.hpp"
 
-namespace
-{
-    namespace hc = hawaii::connection;
-
-    [[nodiscard]] auto init_ethernet(hc::System &connection, hc::Config &config) -> bool
-    {
-        return Ethernet.begin(config.controller_mac);
-    }
-
-    bool has_received_setcolor = false;
-    uint32_t received_setcolor_color = 0;
-    bool has_received_dev_mode = false;
-    bool received_dev_mode = false;
-
-    auto callback(char* topic, byte* payload, unsigned int length) -> void
-    {
-        if (!strcmp(topic, "d"))
-        {
-            has_received_dev_mode = true;
-            memcpy(&received_dev_mode, payload, sizeof(received_dev_mode));
-            return;    
-        }
-
-        if ((length == sizeof(byte[6]) + sizeof(received_setcolor_color)) && !strcmp(topic, "l"))
-        {
-            has_received_setcolor = true;
-            memcpy(&received_setcolor_color, payload + sizeof(byte[6]), sizeof(received_setcolor_color));
-        } 
-    }
-
-    auto init_mqtt(hc::System &connection, hc::Config &config) -> bool
-    {
-        connection.mqtt.setClient(connection.ethernet);
-        connection.mqtt.setServer(config.mqtt_server_address, config.mqtt_server_port);
-        connection.mqtt.setCallback(callback);
-
-        if (connection.mqtt.connect(config.mqtt_client_id))
-        {
-            connection.mqtt.subscribe("l");
-            connection.mqtt.subscribe("d");
-        }
-
-        return connection.mqtt.connected();
-    }
-}
-
 namespace hawaii::connection
 {
     auto init(System &connection, Config &config) -> Error
     {
-        if (!init_ethernet(connection, config))
+        if (!Ethernet.begin(config.controller_mac))
             return Error::FailedToGetIp;
 
-        if (!init_mqtt(connection, config))
+        if (!connection.udp.begin(config.local_port))
             return Error::FailedToInitMqtt;
 
         return Error::None;
     }
 
-    auto loop(System &connection, Config const& config, unsigned long const now) -> bool
+    auto loop(System &connection) -> void
     {
         Ethernet.maintain();
+    }
 
-        if (connection.mqtt.connected())
-        {
-            connection.mqtt.loop();
-            return true;
-        }
-        else
-        {
-            static unsigned long last_reconnect_time = 0;
-            if (5000 < now - last_reconnect_time)
-            {
-                last_reconnect_time = now;
-
-                if (connection.mqtt.connect(config.mqtt_client_id))
-                {
-                    connection.mqtt.subscribe("l");
-                    connection.mqtt.subscribe("d");
-                }
-
-                if (connection.mqtt.connected())
-                {
-                    last_reconnect_time = 0;
-                    return true;
-                }
-            }
-
+    auto get_message(System &connection, Command &message) -> bool
+    {
+        unsigned long long constexpr message_size = sizeof(CommandType) + sizeof(CommandPayload);
+        int packet_size = connection.udp.parsePacket();
+        if (packet_size != message_size)
             return false;
-        }
-    }
 
-    auto try_get_setcolor(uint32_t& out_color) -> bool
-    {
-        if (has_received_setcolor)
+        byte packet_buffer[message_size];
+        int const read_bytes = connection.udp.read(packet_buffer, message_size);
+        if (read_bytes != message_size)
+            return false;
+
+        switch (packet_buffer[0])
         {
-            has_received_setcolor = false;
-            out_color = received_setcolor_color;
-            return true;
+            case static_cast<uint8_t>(CommandType::SetColor):
+            case static_cast<uint8_t>(CommandType::Reboot):
+            case static_cast<uint8_t>(CommandType::ToggleDevMode):
+                break;
+            default:
+                return false;
         }
 
-        return false;
-    }
+        memcpy(&message.type, packet_buffer, sizeof(CommandType));
+        memcpy(&message.payload, packet_buffer + sizeof(CommandType), sizeof(CommandPayload));
 
-    auto try_get_dev_mode(bool& out_is_enabled) -> void
-    {
-        if (has_received_dev_mode)
-        {
-            has_received_dev_mode = false;
-            out_is_enabled = received_dev_mode;
-        }
+        return true;
     }
 
     auto send_ping(System &connection, Config const& config) -> void
     {
-        Topic constexpr topic = "controller/ping";
-
-        char payload[sizeof(config.controller_mac) + 1];
-        memcpy(payload, config.controller_mac, sizeof(config.controller_mac));
-        payload[sizeof(config.controller_mac)] = '\0';
-
-        connection.mqtt.publish(topic, payload);
+        connection.udp.beginPacket(config.server_address, config.server_port);
+        connection.udp.write(static_cast<uint8_t>(Event::Pinged));
+        connection.udp.write(config.controller_id);
+        connection.udp.endPacket();
     }
 
     auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
     {
-        Topic constexpr topic = "accelerator/acceleration";
-
-        char payload[sizeof(config.controller_mac) + sizeof(acceleration) + 1];
-        memcpy(payload, config.controller_mac, sizeof(config.controller_mac));
-        memcpy(payload + sizeof(config.controller_mac), &acceleration, sizeof(acceleration));
-        payload[sizeof(config.controller_mac) + sizeof(acceleration)] = '\0';
-        
-        connection.mqtt.publish(topic, payload);
+        connection.udp.beginPacket(config.server_address, config.server_port);
+        connection.udp.write(static_cast<uint8_t>(Event::Accelerated));
+        connection.udp.write(config.controller_id);
+        connection.udp.write(reinterpret_cast<const uint8_t*>(&acceleration), sizeof(acceleration));
+        connection.udp.endPacket();
     }
 }
