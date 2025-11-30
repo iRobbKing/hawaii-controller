@@ -76,7 +76,7 @@ namespace hawaii::workout
         return error;
     }
 
-    auto run(System &workout, Config &config, State &state, unsigned long const now) -> bool
+    auto run(System &workout, Config &config, State &state, unsigned long const now) -> void
     {
         connection::loop(workout.connection);
 
@@ -107,7 +107,8 @@ namespace hawaii::workout
                     if (command.payload.reboot.controller_id != config.connection.controller_id)
                         break;
 
-                    // ESP.restart();
+                    wdt_enable(WDTO_15MS);
+                    while (true) {}
                     break;
                 }
                 case connection::CommandType::ToggleDevMode:
@@ -146,7 +147,5 @@ namespace hawaii::workout
 
             connection::send_acceleration(workout.connection, config.connection, acceleration);
         }
-
-        return true;
     }
 }

@@ -1,10 +1,11 @@
 #ifndef HAWAII_WORKOUT_H
 #define HAWAII_WORKOUT_H
 
+#include <avr/wdt.h>
+#include <Wire.h>
 #include "../accelerator/accelerator.hpp"
 #include "../connection/connection.hpp"
 #include "../lamp/lamp.hpp"
-#include <Wire.h>
 
 namespace hawaii::workout
 {
@@ -66,7 +67,7 @@ namespace hawaii::workout
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;
-    [[nodiscard]] auto run(System &workout, Config &config, State &state, unsigned long now) -> bool;
+    [[nodiscard]] auto run(System &workout, Config &config, State &state, unsigned long now) -> void;
 }
 
 #endif

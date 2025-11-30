@@ -40,27 +40,17 @@ auto setup() -> void
     {
         is_error = true;
         hl::set_color(workout.lamp, 0xFFFF0000);
-        Serial.print("Error: ");
-        Serial.print(static_cast<int>(error.cause));
-        Serial.print(' ');
-        Serial.println(error.payload.erased);
+        while (true) { }
     }
+
+    wdt_enable(WDTO_2S);
 }
 
 auto loop() -> void
 {
+    wdt_reset(); 
+
     unsigned long const now = millis();
 
-    if (hw::run(workout, config, state, now))
-    {
-        if (is_error)
-            hl::set_color(workout.lamp, 0);
-        is_error = false;
-    }
-    else 
-    {
-        if (!is_error)
-            hl::set_color(workout.lamp, 0xFFFF0000);
-        is_error = true;
-    }
+    hw::run(workout, config, state, now);
 }
