@@ -11,15 +11,21 @@ namespace
         if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
         {
             Wire.clearWireTimeoutFlag();
-
             Wire.end();
             delay(30);
             Wire.begin();
-
             Wire.setWireTimeout();
 
-            ha::reinit(workout.accelerator);
+            ha::reset(workout.accelerator);
 
+            workout.restarted = true;
+
+            return false;
+        }
+
+        if (workout.restarted)
+        {
+            workout.restarted = false;
             return false;
         }
 
@@ -93,7 +99,7 @@ namespace hawaii::workout
             {
                 case connection::CommandType::SetColor:
                 {
-                    if (command.payload.set_color.controller_id != config.connection.controller_id)
+                    if (command.payload.set_color.controller_id != 0 && command.payload.set_color.controller_id != config.connection.controller_id)
                         break;
 
                     lamp::set_color(workout.lamp, command.payload.set_color.color);
@@ -104,9 +110,10 @@ namespace hawaii::workout
                 }
                 case connection::CommandType::Reboot:
                 {
-                    if (command.payload.reboot.controller_id != config.connection.controller_id)
+                    if (command.payload.reboot.controller_id != 0 && command.payload.reboot.controller_id != config.connection.controller_id)
                         break;
 
+                    ha::reset(workout.accelerator);
                     wdt_enable(WDTO_15MS);
                     while (true) {}
                     break;

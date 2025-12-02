@@ -52,6 +52,7 @@ namespace
         int constexpr gyro_deadzone = 6;      // точность калибровки гироскопа (по умолчанию 2).
 
         byte constexpr max_calibrations = 30;
+
         // Задаем диапазон ускорений в +/-16G. Знаменатель 2048.
         // mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
         // Задаем диапазон ускорений в +/-8G.  Знаменатель 4096.
@@ -61,7 +62,7 @@ namespace
         // Задаем диапазон ускорений в +/-2G.  Знаменатель 16384.
         // mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
         // Задаем максимальную угловуюскорость +/-250м/с
-        // mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
+        mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
         // Сброс показателей акселерометра.
         mpu.setXAccelOffset(0);
         mpu.setYAccelOffset(0);
@@ -136,11 +137,18 @@ namespace hawaii::accelerator
         calibrate(accelerator.mpu);
     }
 
-    auto reinit(System &accelerator) -> void
+    auto reset(System &accelerator) -> void
     {
+        accelerator.mpu.reset();
+
+        delay(60);
+
         accelerator.mpu.initialize();
 
+        delay(20);
+
         accelerator.mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
+        accelerator.mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
 
         accelerator.mpu.setXAccelOffset(ax_offset);
         accelerator.mpu.setYAccelOffset(ay_offset);
@@ -150,10 +158,10 @@ namespace hawaii::accelerator
         accelerator.mpu.setZGyroOffset(gz_offset);
     }
 
-    auto get_acceleration(System &accelerator, Config &config, float &out_acceleration) -> bool
+    auto get_acceleration(System &accelerator, Config &config, float &acceleration) -> bool
     {
         int constexpr samples = 60;
-        double average_acceleration = 0;
+        acceleration = 0;
 
         for (int i = 0; i < samples; ++i)
         {
@@ -168,12 +176,9 @@ namespace hawaii::accelerator
             double const a_mc2_x = (double)ax / g;
             double const a_mc2_y = (double)ay / g;
 
-            double const acceleration = sqrt(a_mc2_x * a_mc2_x + a_mc2_y * a_mc2_y);
-
-            average_acceleration += acceleration / samples;
+            acceleration += sqrt(a_mc2_x * a_mc2_x + a_mc2_y * a_mc2_y) / samples;
         }
 
-        out_acceleration = average_acceleration;
         return true;
     }
 }

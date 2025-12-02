@@ -30,8 +30,8 @@ namespace hawaii::accelerator
     };
 
     auto init(System &accelerator, Config &config) -> void;
-    auto reinit(System &accelerator) -> void;
-    [[nodiscard]] auto get_acceleration(System &accelerator, Config &config, float &out_acceleration) -> bool;
+    auto reset(System &accelerator) -> void;
+    [[nodiscard]] auto get_acceleration(System &accelerator, Config &config, float &acceleration) -> bool;
 }
 
 #endif

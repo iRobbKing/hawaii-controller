@@ -64,10 +64,11 @@ namespace hawaii::workout
         uint64_t clear_color_in;
         bool show_hit = false;
         bool need_to_show_me = false;
+        bool restarted = false;
     };
 
     [[nodiscard]] auto init(System &workout, Config &config) -> Error;
-    [[nodiscard]] auto run(System &workout, Config &config, State &state, unsigned long now) -> void;
+    auto run(System &workout, Config &config, State &state, unsigned long now) -> void;
 }
 
 #endif

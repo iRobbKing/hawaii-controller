@@ -25,7 +25,7 @@ auto setup() -> void
 {
     config = hw::Config{
         { ACCEL_FS::A8G },
-        { { 0xDE,0xAD,0xBE,0xEF,0xFE,0x38 }, IPAddress{192, 168, 2, 128}, IPAddress{SERVER}, 1883, 1 },
+        { { 0x02, 0x12, 0x34, 0x56, 0x78, 0x9A }, IPAddress{192, 168, 31, 166}, 5111, 5000, 1 },
         { 24,  6, 255 }
     };
 
@@ -42,14 +42,10 @@ auto setup() -> void
         hl::set_color(workout.lamp, 0xFFFF0000);
         while (true) { }
     }
-
-    wdt_enable(WDTO_2S);
 }
 
 auto loop() -> void
 {
-    wdt_reset(); 
-
     unsigned long const now = millis();
 
     hw::run(workout, config, state, now);
