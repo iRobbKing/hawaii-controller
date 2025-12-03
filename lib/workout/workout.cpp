@@ -131,7 +131,7 @@ namespace hawaii::workout
         if (5000 < now - state.last_ping_time)
         {
             state.last_ping_time = now;
-            connection::send_ping(workout.connection, config.connection);
+            connection::send_ping(workout.connection, config.connection, state.sent_hit_packets);
         }
 
         float acceleration;
@@ -146,6 +146,7 @@ namespace hawaii::workout
             }
 
             connection::send_acceleration(workout.connection, config.connection, acceleration);
+            state.sent_hit_packets += 1;
         }
     }
 }

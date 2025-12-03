@@ -68,7 +68,7 @@ namespace hawaii::connection
 
     auto init(System &connection, Config &config) -> void;
     [[nodiscard]] auto get_message(System &connection, Command &command) -> bool;
-    auto send_ping(System &connection, Config const& config) -> void;
+    auto send_ping(System &connection, Config const& config, unsigned long long sent_hit_packets) -> void;
     auto send_restarted(System &connection, Config const& config) -> void;
     auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
 }

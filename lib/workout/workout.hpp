@@ -21,16 +21,17 @@ namespace hawaii::workout
 
     struct State
     {
+        uint64_t set_color_at;
+        uint64_t clear_color_in;
         float punchbag_acceleration = 0;
         unsigned long last_hit_time_ms = 0;
         AccelerationDelta delta = AccelerationDelta::Noise;
         unsigned long last_ping_time = 0;
         bool need_to_clear_color = false;
-        uint64_t set_color_at;
-        uint64_t clear_color_in;
         bool show_hit = false;
         bool need_to_show_me = false;
         bool restarted = false;
+        unsigned long long sent_hit_packets = 0;
     };
 
     struct Config

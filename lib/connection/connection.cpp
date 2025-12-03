@@ -37,11 +37,12 @@ namespace hawaii::connection
         return true;
     }
 
-    auto send_ping(System &connection, Config const& config) -> void
+    auto send_ping(System &connection, Config const& config, unsigned long long sent_hit_packets) -> void
     {
         connection.udp.beginPacket(config.server_address, config.server_statistics_port);
         connection.udp.write(static_cast<uint8_t>(Event::Pinged));
         connection.udp.write(config.controller_id);
+        connection.udp.write(sent_hit_packets);
         connection.udp.endPacket();
     }
 
