@@ -5,30 +5,34 @@ namespace
     namespace hw = hawaii::workout;
     namespace ha = hawaii::accelerator;
     namespace hl = hawaii::lamp;
+    namespace hc = hawaii::connection;
+
+    auto restart_wire() -> void
+    {
+        Wire.clearWireTimeoutFlag();
+        Wire.end();
+        delay(30);
+        Wire.begin();
+        Wire.setWireTimeout(25000, true);
+    }
 
     auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
     {
         if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
         {
-            Wire.clearWireTimeoutFlag();
-            Wire.end();
-            delay(30);
-            Wire.begin();
-            Wire.setWireTimeout();
-
+            restart_wire();
             ha::reset(workout.accelerator);
-
-            workout.restarted = true;
-
+            state.restarted = true;
             return false;
         }
 
-        if (workout.restarted)
+        if (state.restarted)
         {
-            workout.restarted = false;
+            state.restarted = false;
+            hc::send_restarted(workout.connection, config.connection);
             return false;
         }
-
+        
         if (acceleration < hw::NOISE_LIMIT)
         {
             state.punchbag_acceleration = 0;
@@ -62,33 +66,22 @@ namespace
 
 namespace hawaii::workout
 {
-    auto init(System &workout, Config &config) -> Error
+    auto init(System &workout, Config &config) -> void
     {
-        Error error;
-        error.cause = ErrorCause::None;
-        error.payload.erased = 0;
-
         lamp::init(workout.lamp, config.lamp);
 
         accelerator::init(workout.accelerator, config.accelerator);
 
-        connection::Error const connection_error = connection::init(workout.connection, config.connection);
-        if (connection_error != connection::Error::None) {
-            error.cause = ErrorCause::Connection;
-            error.payload.connection = connection_error;
-            return error;
-        }
-
-        return error;
+        connection::init(workout.connection, config.connection);
     }
 
-    auto run(System &workout, Config &config, State &state, unsigned long const now) -> void
+    auto run(System &workout, Config &config, State &state) -> void
     {
-        connection::loop(workout.connection);
+        unsigned long const now = millis();
 
-        if (workout.need_to_clear_color && workout.clear_color_in <= now - workout.set_color_at)
+        if (state.need_to_clear_color && state.clear_color_in <= now - state.set_color_at)
         {
-            workout.need_to_clear_color = false;
+            state.need_to_clear_color = false;
             lamp::set_color(workout.lamp, 0);
         }
 
@@ -103,9 +96,9 @@ namespace hawaii::workout
                         break;
 
                     lamp::set_color(workout.lamp, command.payload.set_color.color);
-                    workout.need_to_clear_color = true;
-                    workout.set_color_at = now;
-                    workout.clear_color_in = command.payload.set_color.duration_ms;
+                    state.need_to_clear_color = true;
+                    state.set_color_at = now;
+                    state.clear_color_in = command.payload.set_color.duration_ms;
                     break;
                 }
                 case connection::CommandType::Reboot:
@@ -120,19 +113,19 @@ namespace hawaii::workout
                 }
                 case connection::CommandType::ToggleDevMode:
                 {
-                    workout.show_hit = !workout.show_hit;
+                    state.show_hit = !state.show_hit;
                     break;
                 }
             }
         }
         
-        if (workout.need_to_show_me)
+        if (state.need_to_show_me)
         {
-            workout.need_to_show_me = false;
+            state.need_to_show_me = false;
             lamp::set_color(workout.lamp, 0xFF00FFFF);
-            workout.need_to_clear_color = true;
-            workout.set_color_at = now;
-            workout.clear_color_in = 3000;
+            state.need_to_clear_color = true;
+            state.set_color_at = now;
+            state.clear_color_in = 3000;
         }
 
         if (5000 < now - state.last_ping_time)
@@ -144,12 +137,12 @@ namespace hawaii::workout
         float acceleration;
         if (get_acceleration(workout, config, state, now, acceleration))
         {
-            if (workout.show_hit)
+            if (state.show_hit)
             {
                 hl::set_color(workout.lamp, 0xFFFF00FF);
-                workout.need_to_clear_color = true;
-                workout.set_color_at = now;
-                workout.clear_color_in = 200;
+                state.need_to_clear_color = true;
+                state.set_color_at = now;
+                state.clear_color_in = 200;
             }
 
             connection::send_acceleration(workout.connection, config.connection, acceleration);

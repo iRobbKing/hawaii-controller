@@ -9,21 +9,15 @@ namespace hawaii::connection
     using MacAddress = uint8_t[6];
     using Port = uint16_t;
 
-    enum struct Error
-    {
-        None = 0,
-        FailedToGetIp = 1,
-        FailedToInitMqtt = 2,
-        FailedToSendMessage = 3,
-    };
-
     struct Config
     {
         MacAddress controller_mac;
-        IPAddress server_address;
-        Port server_port;
-        Port local_port;
+        IPAddress controller_address;
+        Port controller_port;
         uint8_t controller_id;
+        IPAddress server_address;
+        Port server_hits_port;
+        Port server_statistics_port;
     };
 
     struct System
@@ -69,12 +63,13 @@ namespace hawaii::connection
     {
         Pinged = 1,
         Accelerated = 2,
+        Restarted = 3,
     };
 
-    [[nodiscard]] auto init(System &connection, Config &config) -> Error;
-    auto loop(System &connection) -> void;
+    auto init(System &connection, Config &config) -> void;
     [[nodiscard]] auto get_message(System &connection, Command &command) -> bool;
     auto send_ping(System &connection, Config const& config) -> void;
+    auto send_restarted(System &connection, Config const& config) -> void;
     auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
 }
 

@@ -25,26 +25,12 @@ namespace hawaii::workout
         unsigned long last_hit_time_ms = 0;
         AccelerationDelta delta = AccelerationDelta::Noise;
         unsigned long last_ping_time = 0;
-    };
-
-    enum struct ErrorCause
-    {
-        None = 0,
-        Accelerator = 1,
-        Connection = 2,
-    };
-
-    union ErrorPayload
-    {
-        int erased;
-        accelerator::Error accelerator;
-        connection::Error connection;
-    };
-
-    struct Error
-    {
-        ErrorCause cause;
-        ErrorPayload payload;
+        bool need_to_clear_color = false;
+        uint64_t set_color_at;
+        uint64_t clear_color_in;
+        bool show_hit = false;
+        bool need_to_show_me = false;
+        bool restarted = false;
     };
 
     struct Config
@@ -59,16 +45,10 @@ namespace hawaii::workout
         accelerator::System accelerator;
         connection::System connection;
         lamp::System lamp;
-        bool need_to_clear_color = false;
-        uint64_t set_color_at;
-        uint64_t clear_color_in;
-        bool show_hit = false;
-        bool need_to_show_me = false;
-        bool restarted = false;
     };
 
-    [[nodiscard]] auto init(System &workout, Config &config) -> Error;
-    auto run(System &workout, Config &config, State &state, unsigned long now) -> void;
+    auto init(System &workout, Config &config) -> void;
+    auto run(System &workout, Config &config, State &state) -> void;
 }
 
 #endif
