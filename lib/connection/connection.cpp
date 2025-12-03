@@ -39,7 +39,7 @@ namespace hawaii::connection
 
     auto send_ping(System &connection, Config const& config) -> void
     {
-        connection.udp.beginPacket(config.server_address, config.server_hits_port);
+        connection.udp.beginPacket(config.server_address, config.server_statistics_port);
         connection.udp.write(static_cast<uint8_t>(Event::Pinged));
         connection.udp.write(config.controller_id);
         connection.udp.endPacket();
@@ -55,7 +55,7 @@ namespace hawaii::connection
 
     auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
     {
-        connection.udp.beginPacket(config.server_address, config.server_statistics_port);
+        connection.udp.beginPacket(config.server_address, config.server_hits_port);
         connection.udp.write(static_cast<uint8_t>(Event::Accelerated));
         connection.udp.write(config.controller_id);
         connection.udp.write(reinterpret_cast<const uint8_t*>(&acceleration), sizeof(acceleration));
