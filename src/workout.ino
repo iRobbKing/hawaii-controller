@@ -13,11 +13,11 @@ hw::Config config =
         .sensitivity = ACCEL_FS::A8G
     },
     .connection = {
-        .controller_mac = { 0x02, 0x12, 0x34, 0x56, 0x78, 0x9A },
-        .controller_address = IPAddress{192, 168, 31, 111},
+        .controller_mac = {CONTROLLER_MAC},
+        .controller_address = IPAddress{CONTROLLER_IP},
         .controller_port = 5000,
-        .controller_id = 1,
-        .server_address = IPAddress{192, 168, 31, 166},
+        .controller_id = CONTROLLER_ID,
+        .server_address = IPAddress{SERVER_IP},
         .server_hits_port = 5111,
         .server_statistics_port = 5112,
     },
