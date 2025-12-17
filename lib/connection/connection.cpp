@@ -26,6 +26,7 @@ namespace hawaii::connection
             case static_cast<uint8_t>(CommandType::SetColor):
             case static_cast<uint8_t>(CommandType::Reboot):
             case static_cast<uint8_t>(CommandType::ToggleDevMode):
+            case static_cast<uint8_t>(CommandType::StartFitboxing):
                 break;
             default:
                 return false;

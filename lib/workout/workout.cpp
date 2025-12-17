@@ -18,49 +18,57 @@ namespace
 
     auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
     {
-        if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
+        // if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
+        // {
+        //     restart_wire();
+        //     ha::reset(workout.accelerator);
+        //     state.restarted = true;
+        //     return false;
+        // }
+
+        if (hw::HIT_DEBOUNCE_TIME_MS <= now - state.last_hit_time_ms)
         {
-            restart_wire();
-            ha::reset(workout.accelerator);
-            state.restarted = true;
-            return false;
+            acceleration = 0.5f;
+            state.last_hit_time_ms = now;
+
+            return true;
         }
 
-        if (state.restarted)
-        {
-            state.restarted = false;
-            hc::send_restarted(workout.connection, config.connection);
-            return false;
-        }
+        // if (state.restarted)
+        // {
+        //     state.restarted = false;
+        //     hc::send_restarted(workout.connection, config.connection);
+        //     return false;
+        // }
         
-        if (acceleration < hw::NOISE_LIMIT)
-        {
-            state.punchbag_acceleration = 0;
-            state.delta = hw::AccelerationDelta::Noise;
-            return false;
-        }
+        // if (acceleration < hw::NOISE_LIMIT)
+        // {
+        //     state.punchbag_acceleration = 0;
+        //     state.delta = hw::AccelerationDelta::Noise;
+        //     return false;
+        // }
 
-        if (acceleration <= state.punchbag_acceleration)
-        {
-            state.punchbag_acceleration = acceleration;
-            state.delta = hw::AccelerationDelta::Decreasing;
-            return false;
-        }
+        // if (acceleration <= state.punchbag_acceleration)
+        // {
+        //     state.punchbag_acceleration = acceleration;
+        //     state.delta = hw::AccelerationDelta::Decreasing;
+        //     return false;
+        // }
 
-        if (state.delta != hw::AccelerationDelta::Increasing)
-        {
-            state.punchbag_acceleration = acceleration;
-            state.delta = hw::AccelerationDelta::Increasing;
+        // if (state.delta != hw::AccelerationDelta::Increasing)
+        // {
+        //     state.punchbag_acceleration = acceleration;
+        //     state.delta = hw::AccelerationDelta::Increasing;
 
-            if (hw::HIT_DEBOUNCE_TIME_MS <= now - state.last_hit_time_ms)
-            {
-                state.last_hit_time_ms = now;
+        //     if (hw::HIT_DEBOUNCE_TIME_MS <= now - state.last_hit_time_ms)
+        //     {
+        //         state.last_hit_time_ms = now;
 
-                return true;
-            }
-        }
+        //         return true;
+        //     }
+        // }
 
-        return false;
+        // return false;
     }
 }
 
@@ -116,6 +124,11 @@ namespace hawaii::workout
                     state.show_hit = !state.show_hit;
                     break;
                 }
+                case connection::CommandType::StartFitboxing:
+                {
+                    delay(10222);
+                    break;
+                }
             }
         }
         
@@ -137,13 +150,13 @@ namespace hawaii::workout
         float acceleration;
         if (get_acceleration(workout, config, state, now, acceleration))
         {
-            if (state.show_hit)
-            {
-                hl::set_color(workout.lamp, 0xFFFF00FF);
-                state.need_to_clear_color = true;
-                state.set_color_at = now;
-                state.clear_color_in = 200;
-            }
+            // if (state.show_hit)
+            // {
+            //     hl::set_color(workout.lamp, 0xFFFF00FF);
+            //     state.need_to_clear_color = true;
+            //     state.set_color_at = now;
+            //     state.clear_color_in = 200;
+            // }
 
             connection::send_acceleration(workout.connection, config.connection, acceleration);
             state.sent_hit_packets += 1;
