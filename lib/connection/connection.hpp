@@ -31,7 +31,7 @@ namespace hawaii::connection
         SetColor = 1,
         Reboot = 2,
         ToggleDevMode = 3,
-        StartFitboxing = 4
+        StartFitboxingRound = 4
     };
 
     struct SetColorCommand

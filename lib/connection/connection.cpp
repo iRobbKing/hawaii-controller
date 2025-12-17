@@ -26,7 +26,7 @@ namespace hawaii::connection
             case static_cast<uint8_t>(CommandType::SetColor):
             case static_cast<uint8_t>(CommandType::Reboot):
             case static_cast<uint8_t>(CommandType::ToggleDevMode):
-            case static_cast<uint8_t>(CommandType::StartFitboxing):
+            case static_cast<uint8_t>(CommandType::StartFitboxingRound):
                 break;
             default:
                 return false;
@@ -40,27 +40,36 @@ namespace hawaii::connection
 
     auto send_ping(System &connection, Config const& config, unsigned long long sent_hit_packets) -> void
     {
+        uint8_t buffer[10] = {0};
+        buffer[0] = static_cast<uint8_t>(Event::Pinged);
+        buffer[1] = config.controller_id;
+        memcpy(&buffer[2], &sent_hit_packets, 8);
+
         connection.udp.beginPacket(config.server_address, config.server_statistics_port);
-        connection.udp.write(static_cast<uint8_t>(Event::Pinged));
-        connection.udp.write(config.controller_id);
-        connection.udp.write((uint8_t*)&sent_hit_packets, 8);
+        connection.udp.write(buffer, sizeof(buffer));
         connection.udp.endPacket();
     }
 
     auto send_restarted(System &connection, Config const& config) -> void
     {
+        uint8_t buffer[2] = {0};
+        buffer[0] = static_cast<uint8_t>(Event::Restarted);
+        buffer[1] = config.controller_id;
+
         connection.udp.beginPacket(config.server_address, config.server_statistics_port);
-        connection.udp.write(static_cast<uint8_t>(Event::Restarted));
-        connection.udp.write(config.controller_id);
+        connection.udp.write(buffer, sizeof(buffer));
         connection.udp.endPacket();
     }
 
     auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
     {
+        uint8_t buffer[6] = {0};
+        buffer[0] = static_cast<uint8_t>(Event::Accelerated);
+        buffer[1] = config.controller_id;
+        memcpy(&buffer[2], &acceleration, sizeof(acceleration));
+        
         connection.udp.beginPacket(config.server_address, config.server_hits_port);
-        connection.udp.write(static_cast<uint8_t>(Event::Accelerated));
-        connection.udp.write(config.controller_id);
-        connection.udp.write(reinterpret_cast<const uint8_t*>(&acceleration), sizeof(acceleration));
+        connection.udp.write(buffer, sizeof(buffer));
         connection.udp.endPacket();
     }
 }

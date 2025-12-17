@@ -32,6 +32,8 @@ namespace hawaii::workout
         bool need_to_show_me = false;
         bool restarted = false;
         unsigned long long sent_hit_packets = 0;
+        uint64_t fitboxing_started_at = 0;
+        unsigned long last_message_check_time = 0;
     };
 
     struct Config
