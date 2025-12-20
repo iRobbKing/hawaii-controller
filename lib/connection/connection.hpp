@@ -46,10 +46,16 @@ namespace hawaii::connection
         uint8_t controller_id;
     };
 
+    struct StartFitboxingRoundCommand
+    {
+        uint8_t round;
+    };
+
     union CommandPayload
     {
         SetColorCommand set_color;
         RebootCommand reboot;
+        StartFitboxingRoundCommand start_fitboxing_round;
     };
 
     struct Command
@@ -71,7 +77,7 @@ namespace hawaii::connection
     [[nodiscard]] auto get_message(System &connection, Command &command) -> bool;
     auto send_ping(System &connection, Config const& config, unsigned long long sent_hit_packets) -> void;
     auto send_restarted(System &connection, Config const& config) -> void;
-    auto send_acceleration(System &connection, Config const& config, float acceleration) -> void;
+    auto send_acceleration(System &connection, Config const& config, float acceleration, uint32_t tact_round_index) -> void;
 }
 
 #endif

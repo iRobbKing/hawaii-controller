@@ -61,12 +61,13 @@ namespace hawaii::connection
         connection.udp.endPacket();
     }
 
-    auto send_acceleration(System &connection, Config const& config, float const acceleration) -> void
+    auto send_acceleration(System &connection, Config const& config, float const acceleration, uint32_t const tact_round_index) -> void
     {
-        uint8_t buffer[6] = {0};
+        uint8_t buffer[10] = {0};
         buffer[0] = static_cast<uint8_t>(Event::Accelerated);
         buffer[1] = config.controller_id;
         memcpy(&buffer[2], &acceleration, sizeof(acceleration));
+        memcpy(&buffer[6], &tact_round_index, sizeof(tact_round_index));
         
         connection.udp.beginPacket(config.server_address, config.server_hits_port);
         connection.udp.write(buffer, sizeof(buffer));

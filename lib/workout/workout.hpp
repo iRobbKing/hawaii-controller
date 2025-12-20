@@ -16,7 +16,7 @@ namespace hawaii::workout
         Decreasing = 2,
     };
 
-    unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 250;
+    unsigned long constexpr HIT_DEBOUNCE_TIME_MS = 220;
     float constexpr NOISE_LIMIT = 0.3f;
 
     struct State
@@ -32,8 +32,9 @@ namespace hawaii::workout
         bool need_to_show_me = false;
         bool restarted = false;
         unsigned long long sent_hit_packets = 0;
-        uint64_t fitboxing_started_at = 0;
         unsigned long last_message_check_time = 0;
+        uint64_t fitboxing_started_at = 0;
+        uint8_t fitboxing_round = 0;
     };
 
     struct Config
