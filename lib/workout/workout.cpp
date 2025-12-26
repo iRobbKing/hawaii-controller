@@ -16,63 +16,60 @@ namespace
         Wire.setWireTimeout(25000, true);
     }
 
-    auto get_acceleration(hw::System &workout, hw::Config &config, hw::State &state, unsigned long const now, float &acceleration) -> bool
+    auto is_fitboxing_active(hw::Fitboxing const& fitboxing) -> bool
     {
-        if (!ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
-        {
-            restart_wire();
-            ha::reset(workout.accelerator);
-            state.restarted = true;
-            return false;
-        }
+        return fitboxing.current_round < fitboxing.max_rounds;
+    }
 
-        if (state.restarted)
-        {
-            state.restarted = false;
-            hc::send_restarted(workout.connection, config.connection);
-            return false;
-        }
-        
-        if (acceleration < hw::NOISE_LIMIT)
-        {
-            state.punchbag_acceleration = 0;
-            state.delta = hw::AccelerationDelta::Noise;
-            return false;
-        }
+    auto is_next_tact(hw::Fitboxing const& fitboxing, uint64_t const now) -> bool
+    {
+        uint64_t next_offset = (uint64_t)fitboxing.tact_duration_ms * ((uint64_t)fitboxing.current_series * (uint64_t)fitboxing.max_tact + (uint64_t)fitboxing.current_tact + 1);
+        return fitboxing.current_round_started_at_ms + next_offset <= now;
+    }
 
-        if (acceleration <= state.punchbag_acceleration)
-        {
-            state.punchbag_acceleration = acceleration;
-            state.delta = hw::AccelerationDelta::Decreasing;
-            return false;
-        }
+    auto advance_fitboxing(hw::Fitboxing& fitboxing) -> void
+    {
+        if (fitboxing.max_rounds <= fitboxing.current_round)
+            return;
 
-        if (state.delta != hw::AccelerationDelta::Increasing)
+        fitboxing.current_tact += 1;
+        if (fitboxing.max_tact <= fitboxing.current_tact)
         {
-            state.punchbag_acceleration = acceleration;
-            state.delta = hw::AccelerationDelta::Increasing;
-
-            if (hw::HIT_DEBOUNCE_TIME_MS <= millis() - state.last_hit_time_ms)
+            fitboxing.current_tact = 0;
+            fitboxing.current_series += 1;
+            if (fitboxing.max_series <= fitboxing.current_series)
             {
-                state.last_hit_time_ms = now;
-
-                return true;
+                fitboxing.current_series = 0;
+                fitboxing.current_round = fitboxing.max_rounds;
             }
         }
 
-        return false;
+        fitboxing.last_max_punchbag_acceleration = fitboxing.max_punchbag_acceleration;
+        fitboxing.passed_threshold = false;
+        fitboxing.max_punchbag_acceleration = 0;
+        fitboxing.passed_threshold_with = 0;
+    }
+
+    auto set_lamp_color(hw::System &workout, hw::State &state, uint32_t color, uint64_t now, uint64_t duration) -> void
+    {
+        hawaii::lamp::set_color(workout.lamp, color);
+        state.need_to_clear_color = true;
+        state.set_color_at = now;
+        state.clear_color_in = duration;
     }
 }
 
 namespace hawaii::workout
 {
-    auto init(System &workout, Config &config) -> void
+    auto init(System &workout, Config &config, State& state) -> void
     {
         lamp::init(workout.lamp, config.lamp);
 
         accelerator::init(workout.accelerator, config.accelerator);
 
         connection::init(workout.connection, config.connection);
+
+        state.fitboxing.current_round_started_at_ms = millis();
     }
 
     auto run(System &workout, Config &config, State &state) -> void
@@ -95,44 +92,38 @@ namespace hawaii::workout
                     if (command.payload.set_color.controller_id != 0 && command.payload.set_color.controller_id != config.connection.controller_id)
                         break;
 
-                    lamp::set_color(workout.lamp, command.payload.set_color.color);
-                    state.need_to_clear_color = true;
-                    state.set_color_at = now;
-                    state.clear_color_in = command.payload.set_color.duration_ms;
-                    break;
-                }
-                case connection::CommandType::Reboot:
-                {
-                    if (command.payload.reboot.controller_id != 0 && command.payload.reboot.controller_id != config.connection.controller_id)
-                        break;
-
-                    ha::reset(workout.accelerator);
-                    wdt_enable(WDTO_15MS);
-                    while (true) {}
-                    break;
-                }
-                case connection::CommandType::ToggleDevMode:
-                {
-                    state.show_hit = !state.show_hit;
+                    set_lamp_color(workout, state, command.payload.set_color.color, now, command.payload.set_color.duration_ms);
+                    state.fitboxing.max_punchbag_acceleration = 0.9f;
                     break;
                 }
                 case connection::CommandType::StartFitboxingRound:
                 {
-                    state.fitboxing_started_at = now;
-                    state.fitboxing_round = command.payload.start_fitboxing_round.round;
-                    state.last_hit_time_ms = 0;
+                    state.fitboxing.max_rounds = command.payload.start_fitboxing_round.max_rounds;
+                    state.fitboxing.current_round = command.payload.start_fitboxing_round.current_round;
+                    state.fitboxing.current_round_started_at_ms = now;
+                    state.fitboxing.max_series = command.payload.start_fitboxing_round.max_series;
+                    state.fitboxing.current_series = 0;
+                    state.fitboxing.max_tact = command.payload.start_fitboxing_round.max_tact;
+                    state.fitboxing.current_tact = 0;
+                    state.fitboxing.tact_duration_ms = command.payload.start_fitboxing_round.tact_duration_ms;
+                    state.fitboxing.max_punchbag_acceleration = 0;
+                    state.fitboxing.last_max_punchbag_acceleration = 0;
+                    state.fitboxing.passed_threshold = true;
+                    state.fitboxing.passed_threshold_with = 0;
                     break;
                 }
             }
         }
-        
-        if (state.need_to_show_me)
+
+        if (is_fitboxing_active(state.fitboxing) && is_next_tact(state.fitboxing, now))
         {
-            state.need_to_show_me = false;
-            lamp::set_color(workout.lamp, 0xFF00FFFF);
-            state.need_to_clear_color = true;
-            state.set_color_at = now;
-            state.clear_color_in = 3000;
+            if (NOISE_LIMIT <= state.fitboxing.max_punchbag_acceleration)
+            {
+                connection::send_acceleration(workout.connection, config.connection, state.fitboxing.current_round, state.fitboxing.current_series, state.fitboxing.current_tact, state.fitboxing.max_punchbag_acceleration);
+                state.sent_hit_packets += 1;
+            }
+
+            advance_fitboxing(state.fitboxing);
         }
 
         if (5000 < now - state.last_ping_time)
@@ -141,21 +132,24 @@ namespace hawaii::workout
             connection::send_ping(workout.connection, config.connection, state.sent_hit_packets);
         }
 
-        float acceleration;
-        if (get_acceleration(workout, config, state, now, acceleration))
+        float acceleration = 0;
+        if (ha::get_acceleration(workout.accelerator, config.accelerator, acceleration))
         {
-            if (state.show_hit)
+            if (!state.fitboxing.passed_threshold && (state.fitboxing.last_max_punchbag_acceleration * 1.25f <= acceleration || acceleration <= state.fitboxing.last_max_punchbag_acceleration * 0.85f))
             {
-                hl::set_color(workout.lamp, 0xFFFF00FF);
-                state.need_to_clear_color = true;
-                state.set_color_at = now;
-                state.clear_color_in = 200;
+                state.fitboxing.passed_threshold = true;
+                state.fitboxing.passed_threshold_with = acceleration;
             }
 
-            uint64_t const tact_round_index = (uint64_t)10000 * (uint64_t)state.fitboxing_round + (now - state.fitboxing_started_at) / 444;
-
-            connection::send_acceleration(workout.connection, config.connection, acceleration, (uint32_t)tact_round_index);
-            state.sent_hit_packets += 1;
+            if (state.fitboxing.passed_threshold && state.fitboxing.passed_threshold_with + NOISE_LIMIT <= acceleration && state.fitboxing.max_punchbag_acceleration < acceleration)
+            {
+                state.fitboxing.max_punchbag_acceleration = acceleration;
+            }
+        } 
+        else
+        {
+            restart_wire();
+            ha::reset(workout.accelerator);
         }
     }
 }

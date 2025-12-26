@@ -36,7 +36,7 @@ auto setup() -> void
     Wire.begin();
     Wire.setWireTimeout(25000, true);
 
-    hw::init(workout, config);
+    hw::init(workout, config, state);
 }
 
 auto loop() -> void

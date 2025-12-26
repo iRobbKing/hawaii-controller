@@ -29,8 +29,6 @@ namespace hawaii::connection
     enum struct CommandType : uint8_t
     {
         SetColor = 1,
-        Reboot = 2,
-        ToggleDevMode = 3,
         StartFitboxingRound = 4
     };
 
@@ -41,20 +39,18 @@ namespace hawaii::connection
         uint8_t controller_id;
     };
 
-    struct RebootCommand
-    {
-        uint8_t controller_id;
-    };
-
     struct StartFitboxingRoundCommand
     {
-        uint8_t round;
+        uint16_t tact_duration_ms;
+        uint8_t max_rounds;
+        uint8_t current_round;
+        uint8_t max_series;
+        uint8_t max_tact;
     };
 
     union CommandPayload
     {
         SetColorCommand set_color;
-        RebootCommand reboot;
         StartFitboxingRoundCommand start_fitboxing_round;
     };
 
@@ -77,7 +73,7 @@ namespace hawaii::connection
     [[nodiscard]] auto get_message(System &connection, Command &command) -> bool;
     auto send_ping(System &connection, Config const& config, unsigned long long sent_hit_packets) -> void;
     auto send_restarted(System &connection, Config const& config) -> void;
-    auto send_acceleration(System &connection, Config const& config, float acceleration, uint32_t tact_round_index) -> void;
+    auto send_acceleration(System &connection, Config const& config, uint8_t current_round, uint8_t current_series, uint8_t current_tact, float max_punchbag_acceleration) -> void;
 }
 
 #endif

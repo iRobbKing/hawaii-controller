@@ -160,27 +160,21 @@ namespace hawaii::accelerator
 
     auto get_acceleration(System &accelerator, Config &config, float &acceleration) -> bool
     {
-        int constexpr samples = 60;
-        acceleration = 0;
+        if (Wire.getWireTimeoutFlag())
+            return false;
 
-        for (int i = 0; i < samples; ++i)
-        {
-            if (Wire.getWireTimeoutFlag())
-                return false;
+        int16_t ax, ay, az;
+        accelerator.mpu.getAcceleration(&ax, &ay, &az);
 
-            int16_t ax, ay, az;
-            accelerator.mpu.getAcceleration(&ax, &ay, &az);
+        if (Wire.getWireTimeoutFlag())
+            return false;
 
-            if (Wire.getWireTimeoutFlag())
-                return false;
+        float constexpr g = 4096.0f;
 
-            float constexpr g = 4096.0f;
+        double const a_mc2_x = (double)ax / g;
+        double const a_mc2_y = (double)ay / g;
 
-            double const a_mc2_x = (double)ax / g;
-            double const a_mc2_y = (double)ay / g;
-
-            acceleration += sqrt(a_mc2_x * a_mc2_x + a_mc2_y * a_mc2_y) / samples;
-        }
+        acceleration = sqrt(a_mc2_x * a_mc2_x + a_mc2_y * a_mc2_y);
 
         return true;
     }

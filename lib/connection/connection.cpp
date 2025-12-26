@@ -24,8 +24,6 @@ namespace hawaii::connection
         switch (packet_buffer[0])
         {
             case static_cast<uint8_t>(CommandType::SetColor):
-            case static_cast<uint8_t>(CommandType::Reboot):
-            case static_cast<uint8_t>(CommandType::ToggleDevMode):
             case static_cast<uint8_t>(CommandType::StartFitboxingRound):
                 break;
             default:
@@ -61,14 +59,16 @@ namespace hawaii::connection
         connection.udp.endPacket();
     }
 
-    auto send_acceleration(System &connection, Config const& config, float const acceleration, uint32_t const tact_round_index) -> void
+    auto send_acceleration(System &connection, Config const& config, uint8_t const current_round, uint8_t const current_series, uint8_t const current_tact, float const max_punchbag_acceleration) -> void
     {
-        uint8_t buffer[10] = {0};
+        uint8_t buffer[9] = {0};
         buffer[0] = static_cast<uint8_t>(Event::Accelerated);
         buffer[1] = config.controller_id;
-        memcpy(&buffer[2], &acceleration, sizeof(acceleration));
-        memcpy(&buffer[6], &tact_round_index, sizeof(tact_round_index));
-        
+        buffer[2] = current_round;
+        buffer[3] = current_series;
+        buffer[4] = current_tact;
+        memcpy(&buffer[5], &max_punchbag_acceleration, sizeof(max_punchbag_acceleration));
+
         connection.udp.beginPacket(config.server_address, config.server_hits_port);
         connection.udp.write(buffer, sizeof(buffer));
         connection.udp.endPacket();
