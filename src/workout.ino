@@ -25,7 +25,7 @@ auto setup() -> void
 {
     config = hw::Config{
         { ACCEL_FS::A8G },
-        { { 0xDE,0xAD,0xBE,0xEF,0xFE,0x38 }, IPAddress{192, 168, 2, 128}, IPAddress{SERVER}, 1883, "msk28", "testuser", "123" },
+        { { CONTROLLER_MAC }, IPAddress{CONTROLLER_IP}, IPAddress{SERVER_IP}, 1883, "c" TOSTRING(CONTROLLER_ID) },
         { 24,  6, 255 }
     };
 

@@ -27,8 +27,6 @@ namespace hawaii::workout::connection
         IPAddress mqtt_server_address;
         Port mqtt_server_port;
         char const *mqtt_client_id;
-        char const *mqtt_username;
-        char const *mqtt_password;
     };
 
     struct System
@@ -38,7 +36,7 @@ namespace hawaii::workout::connection
     };
 
     [[nodiscard]] auto init(System &connection, Config &config) -> Error;
-    [[nodiscard]] auto loop(System &connection, Config const& config, unsigned long now) -> bool;
+    [[nodiscard]] auto loop(System &connection, Config &config, unsigned long now) -> bool;
     [[nodiscard]] auto try_get_setcolor(uint32_t& out_color) -> bool;
     auto try_get_dev_mode(bool& out_is_enabled) -> void;
     auto send_ping(System &connection, Config const& config) -> void;

@@ -1,4 +1,5 @@
 #include "workout.hpp"
+#include <avr/wdt.h>
 
 namespace
 {
@@ -68,6 +69,9 @@ namespace hawaii::workout
         accelerator::init(workout.accelerator, config.accelerator);
 
         connection::Error const connection_error = connection::init(workout.connection, config.connection);
+
+        wdt_enable(WDTO_8S);
+
         if (connection_error != connection::Error::None) {
             error.cause = ErrorCause::Connection;
             error.payload.connection = connection_error;
@@ -81,6 +85,8 @@ namespace hawaii::workout
 
     auto run(System &workout, Config &config, State &state, unsigned long const now) -> bool
     {
+        wdt_reset();
+
         if (!connection::loop(workout.connection, config.connection, now))
             return false;
 
